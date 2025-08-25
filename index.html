@@ -105,7 +105,7 @@
 
     // --- seats storage ---
     async function loadSeatsLocal(){ try{ const raw = localStorage.getItem(STORAGE_KEY); if(!raw) return sampleSeats(); return JSON.parse(raw);}catch(e){ return sampleSeats(); }}
-    function sampleSeats(){ return [ { id:1, title:'Miejsce 1 — tylne prawe', basePrice:10, durationSec:120, status:'ready', highestBid:0, highestBidder:null, endTime:null}, { id:2, title:'Miejsce 2 — przednie', basePrice:15, durationSec:120, status:'ready', highestBid:0, highestBidder:null, endTime:null} ]; }
+    function sampleSeats(){ return [ { id:1, title:'Miejsce w przodzie, obok najlepszego kierowcy 😎', basePrice:0.20, durationSec:120, status:'ready', highestBid:0, highestBidder:null, endTime:null}, { id:2, title:'Miejsce z tyłu za kierowcą', basePrice:0.20, durationSec:120, status:'ready', highestBid:0, highestBidder:null, endTime:null}, { id:3, title:'Miejsce z tyłu na środku', basePrice:0.20, durationSec:120, status:'ready', highestBid:0, highestBidder:null, endTime:null}, { id:4, title:'Miejsce z tyłu za pasażerem', basePrice:0.20, durationSec:120, status:'ready', highestBid:0, highestBidder:null, endTime:null}, { id:5, title:'Apartament w rejonie miejsca na koło zapasowe', basePrice:500, durationSec:120, status:'ready', highestBid:0, highestBidder:null, endTime:null}]; }
 
     let seats = [];
     const listEl = document.getElementById('list');
