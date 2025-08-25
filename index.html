@@ -80,7 +80,7 @@
           <button type="submit">Zaloguj</button>
           <button type="button" id="guestBtn" class="ghost">Kontynuuj jako gość</button>
         </div>
-        <div class="muted small" style="margin-top:8px">Tylko użytkownik z imieniem <code>tylko</code> i nazwiskiem <code>przejazd</code> będzie miał uprawnienia do dodawania i uruchamiania aukcji.</div>
+        <div class="muted small" style="margin-top:8px">Twoje dane będą używane lokalnie — to demo.</div>
       </form>
     </div>
   </div>
@@ -140,7 +140,6 @@
           <div class="left">
             <div style="display:flex;justify-content:space-between;align-items:center">
               <div style="font-weight:700">${escapeHtml(seat.title)}</div>
-              <div class="muted small">ID: ${seat.id}</div>
             </div>
             <div class="muted small" style="margin-top:6px">Cena wywoławcza: <strong>${seat.basePrice} zł</strong></div>
             <div style="margin-top:8px">${renderStatus(seat)}</div>
@@ -169,8 +168,11 @@
 
     function renderControls(seat, isAdmin){
       if(seat.status==='ready'){
-        // only admin may start
-        return `${isAdmin ? `<button data-start class="">Start licytacji</button>` : `<button class="ghost" disabled title="Tylko admin może uruchamiać licytacje">Start (tylko admin)</button>`} <button data-edit class="inline ghost">Edytuj</button> <button data-duration class="inline ghost">Zmień czas</button>`;
+        // only admin may start and edit
+        if(isAdmin){
+          return `<button data-start class="">Start licytacji</button> <button data-edit class="inline ghost">Edytuj</button> <button data-duration class="inline ghost">Zmień czas</button>`;
+        }
+        return `<button class="ghost" disabled title="Tylko admin może uruchamiać licytacje">Start (tylko admin)</button>`;
       }
       if(seat.status==='ongoing'){
         const defaultAmount = nextMinBid(seat);
@@ -202,13 +204,13 @@
       let updated=false; const now = Date.now(); seats = seats.map(s => { if(s.id!==id) return s; const min = Math.max(s.basePrice, s.highestBid || 0) + 1; if(amount < min){ if(errEl) errEl.textContent = `Kwota za mała — minimalnie ${min} zł`; return s; } let newEnd = s.endTime; if(s.status==='ongoing' && s.endTime && (s.endTime - now) <= SNIP_PROTECT_WINDOW_MS){ newEnd = s.endTime + SNIP_EXTENSION_MS; } updated = true; if(errEl) errEl.textContent = ''; return {...s, highestBid: amount, highestBidder: bidderName, endTime: newEnd, status:'ongoing'}; }); if(updated){ save(); render(); } }
 
     // Allow admin to edit title/base/duration before starting or even after
-    function editSeat(id){ const seat = seats.find(s=>s.id===id); if(!seat) return; const title = prompt('Nowa nazwa miejsca:', seat.title); if(title===null) return; const base = Number(prompt('Nowa cena wywoławcza (zł):', seat.basePrice)); if(Number.isFinite(base)) seat.basePrice = base; const durMin = Number(prompt('Czas trwania (minuty):', (seat.durationSec/60).toFixed(1))); if(Number.isFinite(durMin) && durMin>0){ seat.durationSec = Math.max(10, Math.round(durMin*60)); // if ongoing, restart timer to new duration
+    function editSeat(id){ const user = getCurrentUser(); if(!isAdmin(user)){ alert('Tylko administrator może edytować aukcje'); return; } const seat = seats.find(s=>s.id===id); if(!seat) return; const title = prompt('Nowa nazwa miejsca:', seat.title); if(title===null) return; const base = Number(prompt('Nowa cena wywoławcza (zł):', seat.basePrice)); if(Number.isFinite(base)) seat.basePrice = base; const durMin = Number(prompt('Czas trwania (minuty):', (seat.durationSec/60).toFixed(1))); if(Number.isFinite(durMin) && durMin>0){ seat.durationSec = Math.max(10, Math.round(durMin*60)); // if ongoing, restart timer to new duration
       if(seat.status==='ongoing'){ seat.endTime = Date.now() + seat.durationSec*1000; }
     }
     seat.title = title.trim() || seat.title; save(); render(); }
 
     // Separate change duration prompt (explicit)
-    function changeDurationPrompt(id){ const seat = seats.find(s=>s.id===id); if(!seat) return; const durMin = prompt('Ustaw nowy czas trwania (minuty). Uwaga: jeśli aukcja jest już trwająca, jej timer zostanie ustawiony na nowy czas (restart).', (seat.durationSec/60).toFixed(1)); if(durMin===null) return; const parsed = Number(durMin); if(!Number.isFinite(parsed) || parsed <= 0){ alert('Niepoprawna wartość'); return; } seat.durationSec = Math.max(10, Math.round(parsed*60)); if(seat.status==='ongoing'){ seat.endTime = Date.now() + seat.durationSec*1000; } save(); render(); }
+    function changeDurationPrompt(id){ const user = getCurrentUser(); if(!isAdmin(user)){ alert('Tylko administrator może zmieniać czas aukcji'); return; } const seat = seats.find(s=>s.id===id); if(!seat) return; const durMin = prompt('Ustaw nowy czas trwania (minuty). Uwaga: jeśli aukcja jest już trwająca, jej timer zostanie ustawiony na nowy czas (restart).', (seat.durationSec/60).toFixed(1)); if(durMin===null) return; const parsed = Number(durMin); if(!Number.isFinite(parsed) || parsed <= 0){ alert('Niepoprawna wartość'); return; } seat.durationSec = Math.max(10, Math.round(parsed*60)); if(seat.status==='ongoing'){ seat.endTime = Date.now() + seat.durationSec*1000; } save(); render(); }
 
     // --- PŁATNOŚCI (PayU) ---
     // Frontend: po kliknięciu Zapłać wysyłamy POST /create-payu-order { seatId, payToPhone }
@@ -256,7 +258,7 @@
   </script>
 
   <!--
-    BACKEND: przykładowy server.js (szkielet) do integracji z PayU
+    BACKEND: przykładowy server.js (szkiet) do integracji z PayU
     -----------------------------------------------------------------
     Uwaga: poniższy kod to szkic — wymaga wypełnienia danymi dostępowymi PayU
     (client id / client secret / POS ID) oraz dokładnego dopasowania do API PayU
