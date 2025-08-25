@@ -1,0 +1,228 @@
+<!doctype html>
+<html lang="pl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Licytacja miejsc — HTML</title>
+  <style>
+    :root{--bg:#f8fafc;--card:#ffffff;--muted:#64748b;--accent:#4f46e5;--success:#16a34a;--danger:#ef4444}
+    *{box-sizing:border-box}
+    body{font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,'Helvetica Neue',Arial; background:var(--bg); margin:0;padding:24px;color:#0f172a}
+    .container{max-width:980px;margin:0 auto}
+    header{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}
+    h1{font-size:20px;margin:0}
+    .card{background:var(--card);border-radius:14px;padding:16px;box-shadow:0 6px 18px rgba(2,6,23,0.06);}
+    form .row{display:flex;gap:8px}
+    input,button{padding:10px;border-radius:10px;border:1px solid #e6edf3}
+    input{flex:1}
+    button{background:var(--accent);color:#fff;border:none;cursor:pointer}
+    .grid{display:grid;gap:12px;margin-top:12px}
+    .seat{display:flex;gap:12px;align-items:flex-start;padding:12px;border-radius:12px;background:#fff}
+    .seat .left{flex:1}
+    .muted{color:var(--muted);font-size:13px}
+    .status{font-weight:700}
+    .timer{background:#fff3f2;color:var(--danger);padding:6px 10px;border-radius:999px;font-family:monospace}
+    .controls{display:flex;gap:8px;flex-wrap:wrap}
+    .small{font-size:13px}
+    .pill{background:#f1f5f9;padding:6px 10px;border-radius:999px}
+    .ghost{background:#f3f4f6;color:#111;border:0}
+    .success{background:var(--success);color:white}
+    .yellow{background:#f59e0b;color:white}
+    .inline{display:inline-block}
+    @media (max-width:700px){.seat{flex-direction:column}}
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>Licytacja miejsc w aucie — (wersja HTML)</h1>
+      <small class="muted">Działa lokalnie w przeglądarce — używa localStorage</small>
+    </header>
+
+    <section class="card">
+      <h2 style="margin:0 0 8px 0;font-size:16px">Dodaj miejsce</h2>
+      <form id="addForm">
+        <div class="row">
+          <input id="seatName" placeholder="Nazwa miejsca (np. tylne lewe)" />
+          <input id="basePrice" type="number" min="0" value="10" style="width:120px" />
+          <input id="duration" type="number" min="0.1" step="0.1" value="2" style="width:120px" />
+          <button>Dodaj</button>
+        </div>
+        <div class="muted small" style="margin-top:8px">Cena wywoławcza (zł) • Czas trwania (minuty)</div>
+      </form>
+    </section>
+
+    <section id="list" class="grid" style="margin-top:16px"></section>
+
+    <footer style="margin-top:14px" class="muted small">Demo — brak integracji płatności. Jeśli chcesz, dodam backend lub Stripe/PayPal.</footer>
+  </div>
+
+  <script>
+    const STORAGE_KEY = 'car_seat_auctions_html_v1';
+
+    function loadSeats(){
+      try{
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if(!raw) return sampleSeats();
+        return JSON.parse(raw);
+      }catch(e){ return sampleSeats(); }
+    }
+
+    function sampleSeats(){
+      return [
+        { id:1, title:'Miejsce 1 — tylne prawe', basePrice:10, durationSec:120, status:'ready', highestBid:0, highestBidder:null, endTime:null},
+        { id:2, title:'Miejsce 2 — przednie', basePrice:15, durationSec:120, status:'ready', highestBid:0, highestBidder:null, endTime:null}
+      ];
+    }
+
+    let seats = loadSeats();
+    const listEl = document.getElementById('list');
+
+    function save(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(seats)); }
+
+    function formatTimeLeft(endTime){
+      if(!endTime) return '';
+      const left = Math.max(0, Math.round((endTime - Date.now())/1000));
+      const mm = String(Math.floor(left/60)).padStart(2,'0');
+      const ss = String(left%60).padStart(2,'0');
+      return `${mm}:${ss}`;
+    }
+
+    function nextMinBid(seat){
+      return Math.max(seat.basePrice, seat.highestBid||0) + 1;
+    }
+
+    function render(){
+      const now = Date.now();
+      seats = seats.map(s => (s.status==='ongoing' && s.endTime && now>=s.endTime) ? ({...s,status:'ended'}) : s);
+      save();
+
+      listEl.innerHTML = '';
+      if(seats.length===0){ listEl.innerHTML = '<div class="muted">Brak miejsc. Dodaj nowe miejsce powyżej.</div>'; return; }
+
+      seats.forEach(seat=>{
+        const el = document.createElement('div'); el.className='seat card';
+        el.innerHTML = `
+          <div class="left">
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <div style="font-weight:700">${escapeHtml(seat.title)}</div>
+              <div class="muted small">ID: ${seat.id}</div>
+            </div>
+            <div class="muted small" style="margin-top:6px">Cena wywoławcza: <strong>${seat.basePrice} zł</strong></div>
+            <div style="margin-top:8px">${renderStatus(seat)}</div>
+            <div style="margin-top:8px;background:#f8fafc;padding:8px;border-radius:10px;font-size:14px">Aktualna najwyższa oferta: <strong>${seat.highestBid?seat.highestBid+' zł':'-'}</strong><div class="muted small">Zwycięzca/obecny licytant: ${seat.highestBidder||'-'}</div></div>
+            <div class="controls" style="margin-top:10px">${renderControls(seat)}</div>
+          </div>
+          <div style="width:150px;text-align:right">
+            <div class="muted small">Czas trwania: ${(Math.round(seat.durationSec/6)/10)} min</div>
+            <div style="margin-top:12px;background:#f1f5f9;padding:10px;border-radius:10px;font-weight:700;text-transform:uppercase">${seat.status}</div>
+          </div>
+        `;
+
+        listEl.appendChild(el);
+
+        const startBtn = el.querySelector('[data-start]');
+        if(startBtn) startBtn.addEventListener('click', ()=>startAuction(seat.id));
+        const relistBtn = el.querySelector('[data-relist]');
+        if(relistBtn) relistBtn.addEventListener('click', ()=>relistSeat(seat.id,60));
+        const resetBtn = el.querySelector('[data-reset]');
+        if(resetBtn) resetBtn.addEventListener('click', ()=>{ resetSeat(seat.id); render(); });
+        const bidForm = el.querySelector('form');
+        if(bidForm) bidForm.addEventListener('submit', ev=>{
+          ev.preventDefault();
+          const name = bidForm.querySelector('[name="bidder"]').value.trim();
+          const amount = Number(bidForm.querySelector('[name="amount"]').value);
+          const errEl = bidForm.querySelector('.err');
+          placeBid(seat.id, name, amount, errEl);
+        });
+      });
+    }
+
+    function renderStatus(seat){
+      if(seat.status==='ready') return `<span class="pill">Gotowe do startu</span>`;
+      if(seat.status==='ongoing') return `<span class="timer">${formatTimeLeft(seat.endTime)}</span>`;
+      if(seat.status==='ended') return `<span class="pill" style="background:#ecfccb;color:#4b7f1a">Zakończone</span>`;
+      return '';
+    }
+
+    function renderControls(seat){
+      if(seat.status==='ready'){
+        return `<button data-start class="">Start licytacji</button>`;
+      }
+      if(seat.status==='ongoing'){
+        return `<form class="row" style="margin-top:6px">
+            <input name="bidder" placeholder="Twoje imię/id" style="flex:1" />
+            <input name="amount" type="number" value="${seat.highestBid?seat.highestBid+1:seat.basePrice}" style="width:110px" />
+            <button type="submit" class="success">Licytuj</button>
+            <div class="err muted small" style="width:100%"></div>
+          </form>`;
+      }
+      return `<div class="small">Wygrał: <strong>${seat.highestBidder||'—'}</strong> za <strong>${seat.highestBid?seat.highestBid+' zł':'—'}</strong>
+        <div style="margin-top:6px"><button data-relist class="yellow">Wystaw ponownie (+60s)</button> <button data-reset class="ghost">Resetuj</button></div></div>`;
+    }
+
+    function startAuction(id){
+      seats = seats.map(s => s.id===id ? ({...s, status:'ongoing', endTime: Date.now() + s.durationSec*1000, highestBid: s.highestBid || s.basePrice}) : s);
+      save(); render();
+    }
+
+    function relistSeat(id, extraSec=60){
+      seats = seats.map(s => s.id===id ? ({...s, status:'ongoing', endTime: Date.now() + extraSec*1000, highestBid: s.highestBid || s.basePrice}) : s);
+      save(); render();
+    }
+
+    function resetSeat(id){
+      seats = seats.map(s => s.id===id ? ({...s, status:'ready', highestBid:0, highestBidder:null, endTime:null}) : s);
+      save(); render();
+    }
+
+    function placeBid(id, bidderName, amount, errEl){
+      if(!bidderName){ if(errEl) errEl.textContent='Podaj swoje imię/id'; return; }
+      amount = Number(amount);
+      seats = seats.map(s => {
+        if(s.id!==id) return s;
+        const min = Math.max(s.basePrice, s.highestBid||0) + 1;
+        if(amount < min){ if(errEl) errEl.textContent = `Kwota za mała — minimalnie ${min} zł`; return s; }
+        if(errEl) errEl.textContent = '';
+        return {...s, highestBid: amount, highestBidder: bidderName };
+      });
+      save(); render();
+    }
+
+    setInterval(()=>{
+      const now = Date.now();
+      let changed = false;
+      seats = seats.map(s => {
+        if(s.status==='ongoing' && s.endTime && now>=s.endTime){ changed = true; return {...s, status:'ended'}; }
+        return s;
+      });
+      if(changed) save();
+      render();
+    }, 1000);
+
+    document.getElementById('addForm').addEventListener('submit', ev=>{
+      ev.preventDefault();
+      const name = document.getElementById('seatName').value.trim();
+      const base = Number(document.getElementById('basePrice').value) || 0;
+      const durMin = Number(document.getElementById('duration').value) || 1;
+      const seat = {
+        id: Date.now(),
+        title: name || `Miejsce ${seats.length+1}`,
+        basePrice: base,
+        durationSec: Math.max(10, Math.round(durMin*60)),
+        status: 'ready', highestBid:0, highestBidder:null, endTime:null
+      };
+      seats.unshift(seat);
+      save();
+      document.getElementById('seatName').value='';
+      document.getElementById('basePrice').value='10';
+      document.getElementById('duration').value='2';
+      render();
+    });
+
+    function escapeHtml(str){ return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+
+    render();
+  </script>
+</body>
+</html>
