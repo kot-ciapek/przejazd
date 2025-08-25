@@ -3,13 +3,13 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Licytacja miejsc na przejazd — HTML + PayU (BLIK)</title>
+  <title>Licytacja miejsc na przejazd — HTML + Stripe (demo)</title>
   <style>
     :root{--bg:#f8fafc;--card:#ffffff;--muted:#64748b;--accent:#4f46e5;--success:#16a34a;--danger:#ef4444}
     *{box-sizing:border-box}
     body{font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,'Helvetica Neue',Arial; background:var(--bg); margin:0;padding:24px;color:#0f172a}
     .container{max-width:980px;margin:0 auto}
-    header{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}
+    header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
     h1{font-size:20px;margin:0}
     .card{background:var(--card);border-radius:14px;padding:16px;box-shadow:0 6px 18px rgba(2,6,23,0.06);}    
     form .row{display:flex;gap:8px}
@@ -41,7 +41,10 @@
 <body>
   <div class="container">
     <header>
-      <h1>Licytacja miejsc w aucie — (wersja HTML)</h1>
+      <div>
+        <h1>Licytacja miejsc w aucie — (wersja HTML)</h1>
+        <div class="muted small">Proszę nie robić sobie żartów z tej strony — używaj odpowiedzialnie.</div>
+      </div>
       <div style="text-align:right">
         <div id="userInfo" class="muted small">Nie zalogowano</div>
         <div id="adminNotice" class="muted small" style="display:none">Jesteś administratorem</div>
@@ -64,7 +67,7 @@
 
     <section id="list" class="grid" style="margin-top:16px"></section>
 
-    <footer style="margin-top:14px" class="muted small">Płatności BLIK obsługiwane przez PayU. Domyślny numer telefonu/odbiorcy w meta danych: <strong>797318071</strong>. Wymagany backend do utworzenia zamówienia u PayU.</footer>
+    <footer style="margin-top:14px" class="muted small">Płatności (demo) przez Stripe Checkout (BLIK/inna metoda) — wymaga backendu. Możesz podłączyć własny provider.</footer>
   </div>
 
   <!-- Login modal (wymagane na początku) -->
@@ -86,9 +89,11 @@
   </div>
 
   <script>
-    const STORAGE_KEY = 'car_seat_auctions_html_v1_v2';
+    const STORAGE_KEY = 'car_seat_auctions_html_v1_v3';
     const USER_KEY = 'car_seat_user_v1';
-    const PAYU_PAY_TO_PHONE = '797318071'; // zgodnie z prośbą
+
+    // If you want cross-machine sync, run a backend that exposes /seats (GET/POST) and /create-checkout-session
+    // This frontend will try to talk to that backend; if it isn't available it'll fall back to localStorage.
 
     function escapeHtml(str){ return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
 
@@ -99,22 +104,44 @@
     function isAdmin(user){ if(!user) return false; return (String(user.first||'').toLowerCase() === 'tylko' && String(user.last||'').toLowerCase() === 'przejazd'); }
 
     // --- seats storage ---
-    function loadSeats(){ try{ const raw = localStorage.getItem(STORAGE_KEY); if(!raw) return sampleSeats(); return JSON.parse(raw);}catch(e){ return sampleSeats(); }}
+    async function loadSeatsLocal(){ try{ const raw = localStorage.getItem(STORAGE_KEY); if(!raw) return sampleSeats(); return JSON.parse(raw);}catch(e){ return sampleSeats(); }}
     function sampleSeats(){ return [ { id:1, title:'Miejsce 1 — tylne prawe', basePrice:10, durationSec:120, status:'ready', highestBid:0, highestBidder:null, endTime:null}, { id:2, title:'Miejsce 2 — przednie', basePrice:15, durationSec:120, status:'ready', highestBid:0, highestBidder:null, endTime:null} ]; }
 
-    let seats = loadSeats();
+    let seats = [];
     const listEl = document.getElementById('list');
 
-    function save(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(seats)); }
+    function saveLocal(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(seats)); }
 
     function formatTimeLeft(endTime){ if(!endTime) return ''; const left = Math.max(0, Math.round((endTime - Date.now())/1000)); const mm = String(Math.floor(left/60)).padStart(2,'0'); const ss = String(left%60).padStart(2,'0'); return `${mm}:${ss}`; }
     function nextMinBid(seat){ return Math.max(seat.basePrice, seat.highestBid || 0) + 1; }
+
+    // Try to fetch seats from server. If server responds, replace local copy and saveLocal.
+    async function fetchSeatsFromServer(){
+      try{
+        const res = await fetch('/seats');
+        if(!res.ok) throw new Error('no server');
+        const remote = await res.json();
+        seats = remote;
+        saveLocal();
+        render();
+        return true;
+      }catch(e){ return false; }
+    }
+
+    // Try to push local seats to server (POST /seats). Returns true on success.
+    async function pushSeatsToServer(){
+      try{
+        const res = await fetch('/seats', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(seats) });
+        if(!res.ok) throw new Error('push failed');
+        return true;
+      }catch(e){ return false; }
+    }
 
     // render + controls
     function render(){
       const now = Date.now();
       seats = seats.map(s => (s.status==='ongoing' && s.endTime && now>=s.endTime) ? ({...s,status:'ended'}) : s);
-      save();
+      saveLocal();
 
       const user = getCurrentUser();
       const admin = isAdmin(user);
@@ -186,36 +213,35 @@
       // seat.status === 'ended' — pokaż przycisk płatności do zapłacenia przez zwycięzcę
       return `<div class="small">Wygrał: <strong>${escapeHtml(seat.highestBidder) || '—'}</strong> za <strong>${seat.highestBid?seat.highestBid+' zł':'—'}</strong>
         <div style="margin-top:6px">
-          <button data-pay class="success">Zapłać (BLIK przez PayU)</button>
+          <button data-pay class="success">Zapłać (Stripe Checkout)</button>
           <button data-relist class="yellow">Wystaw ponownie (+60s)</button>
           <button data-reset class="ghost">Resetuj</button>
         </div></div>`;
     }
 
-    function startAuction(id){ const user = getCurrentUser(); if(!isAdmin(user)){ alert('Tylko administrator może uruchamiać licytacje'); return; } seats = seats.map(s => s.id===id ? ({...s, status:'ongoing', endTime: Date.now() + s.durationSec*1000, highestBid: s.highestBid || s.basePrice}) : s); save(); render(); }
-    function relistSeat(id, extraSec=60){ seats = seats.map(s => s.id===id ? ({...s, status:'ongoing', endTime: Date.now() + extraSec*1000, highestBid: s.highestBid || s.basePrice}) : s); save(); render(); }
-    function resetSeat(id){ seats = seats.map(s => s.id===id ? ({...s, status:'ready', highestBid:0, highestBidder:null, endTime:null}) : s); save(); render(); }
+    async function startAuction(id){ const user = getCurrentUser(); if(!isAdmin(user)){ alert('Tylko administrator może uruchamiać licytacje'); return; } seats = seats.map(s => s.id===id ? ({...s, status:'ongoing', endTime: Date.now() + s.durationSec*1000, highestBid: s.highestBid || s.basePrice}) : s); saveLocal(); await pushSeatsToServer(); render(); }
+    async function relistSeat(id, extraSec=60){ seats = seats.map(s => s.id===id ? ({...s, status:'ongoing', endTime: Date.now() + extraSec*1000, highestBid: s.highestBid || s.basePrice}) : s); saveLocal(); await pushSeatsToServer(); render(); }
+    async function resetSeat(id){ seats = seats.map(s => s.id===id ? ({...s, status:'ready', highestBid:0, highestBidder:null, endTime:null}) : s); saveLocal(); await pushSeatsToServer(); render(); }
 
     // Anti-sniping: jeśli oferta wpłynie w ostatnich 10s, wydłuż o 15s
     const SNIP_PROTECT_WINDOW_MS = 10_000;
     const SNIP_EXTENSION_MS = 15_000;
 
-    function placeBid(id, bidderName, amount, errEl){ if(!bidderName){ if(errEl) errEl.textContent='Podaj swoje imię/id'; return; } if(!Number.isFinite(amount) || amount <= 0){ if(errEl) errEl.textContent='Podaj poprawną kwotę'; return; }
-      let updated=false; const now = Date.now(); seats = seats.map(s => { if(s.id!==id) return s; const min = Math.max(s.basePrice, s.highestBid || 0) + 1; if(amount < min){ if(errEl) errEl.textContent = `Kwota za mała — minimalnie ${min} zł`; return s; } let newEnd = s.endTime; if(s.status==='ongoing' && s.endTime && (s.endTime - now) <= SNIP_PROTECT_WINDOW_MS){ newEnd = s.endTime + SNIP_EXTENSION_MS; } updated = true; if(errEl) errEl.textContent = ''; return {...s, highestBid: amount, highestBidder: bidderName, endTime: newEnd, status:'ongoing'}; }); if(updated){ save(); render(); } }
+    async function placeBid(id, bidderName, amount, errEl){ if(!bidderName){ if(errEl) errEl.textContent='Podaj swoje imię/id'; return; } if(!Number.isFinite(amount) || amount <= 0){ if(errEl) errEl.textContent='Podaj poprawną kwotę'; return; }
+      let updated=false; const now = Date.now(); seats = seats.map(s => { if(s.id!==id) return s; const min = Math.max(s.basePrice, s.highestBid || 0) + 1; if(amount < min){ if(errEl) errEl.textContent = `Kwota za mała — minimalnie ${min} zł`; return s; } let newEnd = s.endTime; if(s.status==='ongoing' && s.endTime && (s.endTime - now) <= SNIP_PROTECT_WINDOW_MS){ newEnd = s.endTime + SNIP_EXTENSION_MS; } updated = true; if(errEl) errEl.textContent = ''; return {...s, highestBid: amount, highestBidder: bidderName, endTime: newEnd, status:'ongoing'}; }); if(updated){ saveLocal(); await pushSeatsToServer(); render(); } }
 
     // Allow admin to edit title/base/duration before starting or even after
-    function editSeat(id){ const user = getCurrentUser(); if(!isAdmin(user)){ alert('Tylko administrator może edytować aukcje'); return; } const seat = seats.find(s=>s.id===id); if(!seat) return; const title = prompt('Nowa nazwa miejsca:', seat.title); if(title===null) return; const base = Number(prompt('Nowa cena wywoławcza (zł):', seat.basePrice)); if(Number.isFinite(base)) seat.basePrice = base; const durMin = Number(prompt('Czas trwania (minuty):', (seat.durationSec/60).toFixed(1))); if(Number.isFinite(durMin) && durMin>0){ seat.durationSec = Math.max(10, Math.round(durMin*60)); // if ongoing, restart timer to new duration
+    async function editSeat(id){ const user = getCurrentUser(); if(!isAdmin(user)){ alert('Tylko administrator może edytować aukcje'); return; } const seat = seats.find(s=>s.id===id); if(!seat) return; const title = prompt('Nowa nazwa miejsca:', seat.title); if(title===null) return; const base = Number(prompt('Nowa cena wywoławcza (zł):', seat.basePrice)); if(Number.isFinite(base)) seat.basePrice = base; const durMin = Number(prompt('Czas trwania (minuty):', (seat.durationSec/60).toFixed(1))); if(Number.isFinite(durMin) && durMin>0){ seat.durationSec = Math.max(10, Math.round(durMin*60)); // if ongoing, restart timer to new duration
       if(seat.status==='ongoing'){ seat.endTime = Date.now() + seat.durationSec*1000; }
     }
-    seat.title = title.trim() || seat.title; save(); render(); }
+    seat.title = title.trim() || seat.title; saveLocal(); await pushSeatsToServer(); render(); }
 
     // Separate change duration prompt (explicit)
-    function changeDurationPrompt(id){ const user = getCurrentUser(); if(!isAdmin(user)){ alert('Tylko administrator może zmieniać czas aukcji'); return; } const seat = seats.find(s=>s.id===id); if(!seat) return; const durMin = prompt('Ustaw nowy czas trwania (minuty). Uwaga: jeśli aukcja jest już trwająca, jej timer zostanie ustawiony na nowy czas (restart).', (seat.durationSec/60).toFixed(1)); if(durMin===null) return; const parsed = Number(durMin); if(!Number.isFinite(parsed) || parsed <= 0){ alert('Niepoprawna wartość'); return; } seat.durationSec = Math.max(10, Math.round(parsed*60)); if(seat.status==='ongoing'){ seat.endTime = Date.now() + seat.durationSec*1000; } save(); render(); }
+    async function changeDurationPrompt(id){ const user = getCurrentUser(); if(!isAdmin(user)){ alert('Tylko administrator może zmieniać czas aukcji'); return; } const seat = seats.find(s=>s.id===id); if(!seat) return; const durMin = prompt('Ustaw nowy czas trwania (minuty). Uwaga: jeśli aukcja jest już trwająca, jej timer zostanie ustawiony na nowy czas (restart).', (seat.durationSec/60).toFixed(1)); if(durMin===null) return; const parsed = Number(durMin); if(!Number.isFinite(parsed) || parsed <= 0){ alert('Niepoprawna wartość'); return; } seat.durationSec = Math.max(10, Math.round(parsed*60)); if(seat.status==='ongoing'){ seat.endTime = Date.now() + seat.durationSec*1000; } saveLocal(); await pushSeatsToServer(); render(); }
 
-    // --- PŁATNOŚCI (PayU) ---
-    // Frontend: po kliknięciu Zapłać wysyłamy POST /create-payu-order { seatId, payToPhone }
-    // Backend powinien utworzyć zamówienie u PayU (w trybie testowym lub produkcyjnym) i zwrócić url do przekierowania klienta.
-    // W tym demo wysyłamy numer telefonu odbiorcy/pay-to w polu payToPhone (domyślnie 797318071).
+    // --- PŁATNOŚCI (Stripe Checkout demo) ---
+    // Frontend: po kliknięciu Zapłać wysyłamy POST /create-checkout-session { seatId }
+    // Backend powinien utworzyć session w Stripe i zwrócić { url }
 
     async function startPayment(seatId){
       const seat = seats.find(s=>s.id===seatId);
@@ -223,23 +249,26 @@
       if(!seat.highestBid || !seat.highestBidder){ alert('Brak zwycięzcy/kwoty'); return; }
 
       try{
-        const res = await fetch('/create-payu-order', {
-          method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ seatId, amount: seat.highestBid, description: seat.title, payToPhone: PAYU_PAY_TO_PHONE })
+        const res = await fetch('/create-checkout-session', {
+          method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ seatId })
         });
         const data = await res.json();
-        if(data.paymentUrl){ window.location = data.paymentUrl; }
-        else if(data.error){ alert('Błąd tworzenia zamówienia PayU: ' + data.error); }
+        if(data.url){ window.location = data.url; }
+        else if(data.error){ alert('Błąd tworzenia sesji płatności: ' + data.error); }
       }catch(e){ alert('Błąd sieci: ' + e.message); }
     }
 
-    // synchronizacja między kartami
+    // synchronization: try server every 3s
+    setInterval(()=>fetchSeatsFromServer(), 3000);
+
+    // synchronizacja między kartami (localStorage)
     window.addEventListener('storage', (ev)=>{ if(ev.key === STORAGE_KEY){ try{ const remote = JSON.parse(ev.newValue || '[]'); seats = remote; render(); }catch(e){} } });
 
     // cykliczne sprawdzanie czasu (1s)
-    setInterval(()=>{ const now = Date.now(); let changed = false; seats = seats.map(s => { if(s.status==='ongoing' && s.endTime && now>=s.endTime){ changed = true; return {...s, status:'ended'}; } return s; }); if(changed) save(); render(); }, 1000);
+    setInterval(()=>{ const now = Date.now(); let changed = false; seats = seats.map(s => { if(s.status==='ongoing' && s.endTime && now>=s.endTime){ changed = true; return {...s, status:'ended'}; } return s; }); if(changed){ saveLocal(); pushSeatsToServer(); } render(); }, 1000);
 
     // --- add form handling ---
-    document.getElementById('addForm').addEventListener('submit', ev=>{ ev.preventDefault(); const user = getCurrentUser(); if(!isAdmin(user)){ document.getElementById('addErr').textContent = 'Tylko administrator może dodawać nowe licytacje.'; return; } const nameEl = document.getElementById('seatName'); const baseEl = document.getElementById('basePrice'); const durEl = document.getElementById('duration'); const name = nameEl.value.trim(); const base = Number(baseEl.value) || 0; const durMin = Number(durEl.value) || 1; if(base < 0){ document.getElementById('addErr').textContent = 'Cena wywoławcza musi być >= 0'; return; } if(durMin < 0.1){ document.getElementById('addErr').textContent = 'Czas trwania musi być co najmniej 0.1 minuty'; return; } const seat = { id: Date.now(), title: name || `Miejsce ${seats.length+1}`, basePrice: base, durationSec: Math.max(10, Math.round(durMin*60)), status: 'ready', highestBid:0, highestBidder:null, endTime:null }; seats.unshift(seat); save(); nameEl.value=''; baseEl.value='10'; durEl.value='2'; nameEl.focus(); render(); });
+    document.getElementById('addForm').addEventListener('submit', async ev=>{ ev.preventDefault(); const user = getCurrentUser(); if(!isAdmin(user)){ document.getElementById('addErr').textContent = 'Tylko administrator może dodawać nowe licytacje.'; return; } const nameEl = document.getElementById('seatName'); const baseEl = document.getElementById('basePrice'); const durEl = document.getElementById('duration'); const name = nameEl.value.trim(); const base = Number(baseEl.value) || 0; const durMin = Number(durEl.value) || 1; if(base < 0){ document.getElementById('addErr').textContent = 'Cena wywoławcza musi być >= 0'; return; } if(durMin < 0.1){ document.getElementById('addErr').textContent = 'Czas trwania musi być co najmniej 0.1 minuty'; return; } const seat = { id: Date.now(), title: name || `Miejsce ${seats.length+1}`, basePrice: base, durationSec: Math.max(10, Math.round(durMin*60)), status: 'ready', highestBid:0, highestBidder:null, endTime:null }; seats.unshift(seat); saveLocal(); await pushSeatsToServer(); nameEl.value=''; baseEl.value='10'; durEl.value='2'; nameEl.focus(); render(); });
 
     // --- login modal handling ---
     const loginOverlay = document.getElementById('loginOverlay');
@@ -251,74 +280,87 @@
       setCurrentUser({ first: 'Gość', last: '' }); loginOverlay.style.display = 'none'; render(); });
 
     // If user already present, hide login
-    (function initAuth(){ const user = getCurrentUser(); if(user){ loginOverlay.style.display = 'none'; } else { loginOverlay.style.display = 'flex'; } render(); })();
+    (async function init(){ const local = await loadSeatsLocal(); seats = local; // try to fetch from server initially
+      await fetchSeatsFromServer(); const user = getCurrentUser(); if(user){ loginOverlay.style.display = 'none'; } else { loginOverlay.style.display = 'flex'; } render(); })();
 
-    // initial render
+    // initial render (fallback)
     render();
   </script>
 
   <!--
-    BACKEND: przykładowy server.js (szkiet) do integracji z PayU
+    BACKEND: przykładowy server.js (Node.js + Express) — obsługa /seats i Stripe Checkout
     -----------------------------------------------------------------
-    Uwaga: poniższy kod to szkic — wymaga wypełnienia danymi dostępowymi PayU
-    (client id / client secret / POS ID) oraz dokładnego dopasowania do API PayU
-    (środowisko testowe vs produkcyjne). Nie umieszczaj tajnych kluczy w kliencie.
+    Ten backend umożliwia synchronizację między komputerami (GET/POST /seats)
+    oraz tworzenie sesji płatności Stripe (POST /create-checkout-session).
 
     Instalacja:
       npm init -y
-      npm i express axios body-parser dotenv
+      npm i express stripe body-parser dotenv
 
     .env:
-      PAYU_CLIENT_ID=...
-      PAYU_CLIENT_SECRET=...
+      STRIPE_SECRET_KEY=sk_test_...
       DOMAIN=http://localhost:4242
 
-    server.js (szkic):
+    server.js (przykład):
 
     const express = require('express');
-    const axios = require('axios');
     const bodyParser = require('body-parser');
+    const Stripe = require('stripe');
     require('dotenv').config();
 
+    const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
     const app = express();
     app.use(bodyParser.json());
 
-    // W tym demo trzymamy aukcje w pamięci — w produkcji użyj DB
+    // prosty storage w pamieci — uzyj DB w produkcji
     let seats = [];
 
-    app.get('/seats', (req,res)=> res.json(seats));
-    app.post('/seats', (req,res)=>{ seats = req.body; res.json({ok:true}); });
+    app.get('/seats', (req,res)=>{
+      res.json(seats);
+    });
 
-    // Endpoint tworzący zamówienie w PayU. Zwraca obiekt { paymentUrl }
-    app.post('/create-payu-order', async (req,res)=>{
+    app.post('/seats', (req,res)=>{
+      seats = req.body;
+      res.json({ok:true});
+    });
+
+    app.post('/create-checkout-session', async (req,res)=>{
       try{
-        const { seatId, amount, description, payToPhone } = req.body;
+        const { seatId } = req.body;
         const seat = seats.find(s=>s.id === seatId);
         if(!seat) return res.status(400).json({ error: 'Seat not found' });
+        if(!seat.highestBid) return res.status(400).json({ error: 'No winning bid' });
 
-        // --- 1) Pobierz token OAuth2 z PayU (w zależności od wersji API) ---
-        // --- 2) Stwórz zamówienie / order u PayU z kwotą i danymi klienta ---
-        // --- 3) Odbierz w odpowiedzi URL do przekierowania klienta (payUrl) ---
+        const domain = process.env.DOMAIN || 'http://localhost:4242';
+        const session = await stripe.checkout.sessions.create({
+          payment_method_types: ['card','blik'], // depends on your Stripe account
+          mode: 'payment',
+          line_items: [{
+            price_data: { currency: 'pln', product_data: { name: seat.title }, unit_amount: Math.round(seat.highestBid * 100) },
+            quantity: 1,
+          }],
+          success_url: `${domain}/success.html?session_id={CHECKOUT_SESSION_ID}`,
+          cancel_url: `${domain}/cancel.html`,
+          metadata: { seatId: String(seatId) }
+        });
 
-        // Poniżej: przykładowa struktura odpowiedzi — zastąp implementacją zgodną z PayU
-        return res.json({ paymentUrl: 'https://sandbox.payu.pl/pay/redirect-for-demo?order=12345' });
+        res.json({ url: session.url });
       }catch(err){ console.error(err); res.status(500).json({ error: err.message }); }
     });
 
-    // Webhook: PayU powiadomi backend o statusie płatności — obsłuż to i zaktualizuj aukcję
-    app.post('/payu-webhook', (req,res)=>{
-      // weryfikuj podpis, sprawdź status płatności i oznacz aukcję jako opłaconą
-      res.json({ received: true });
+    // webhook do potwierdzenia platnosci (opcjonalnie)
+    app.post('/webhook', bodyParser.raw({type: 'application/json'}), (req,res)=>{
+      // implementuj verification i aktualizacje seats
+      res.json({received:true});
     });
 
     app.listen(4242, ()=>console.log('Server running on http://localhost:4242'));
 
     UWAGI:
-    - W PayU użyj środowiska testowego (sandbox) do testów. Dokumentacja PayU opisuje
-      kroki: uzyskanie tokenu OAuth, utworzenie zamówienia i odbiór redirect url / statusów.
-    - Przekaż w metadanych zamówienia numer telefonu docelowego (payToPhone) jeśli chcesz
-      mieć go w informacji o transakcji.
-    - Po udanej płatności PayU wywoła Twój webhook — tam potwierdź i oznacz miejsce jako sprzedane.
+    - Uruchom backend na serwerze widocznym dla wszystkich maszyn, które mają widzieć aukcje.
+    - W trybie testowym Stripe pozwala przetestować płatności bez prawdziwych kart.
+    - Ten przykład używa Stripe jako "dowolnej innej" metody płatności — jeśli chcesz inny provider
+      (PayPal, Przelewy24, Tpay), mogę przygotować odpowiedni endpoint.
   -->
 
 </body>
