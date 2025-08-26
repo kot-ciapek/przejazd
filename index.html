@@ -29,8 +29,7 @@
   </style>
 </head>
 <body>
-  <h1>Licytacja miejsc – Częstochowa → Radostków‑Kolonia</h1>
-  <p class="muted">Strona statyczna (prototyp). Dla hostingu użyj GitHub Pages – wrzuć ten plik jako <code>index.html</code> do repo i włącz Pages.</p>
+  <h1>Licytacja miejsc – Częstochowa → Radostków-Kolonia</h1>
 
   <div class="card">
     <h2>Status licytacji</h2>
@@ -40,18 +39,14 @@
       <div class="spacer"></div>
       <div class="muted">Koniec: <span id="endDateText"></span></div>
     </div>
-
     <table>
       <thead><tr><th>Miejsce</th><th>Aktualna kwota</th><th>Prowadzący</th></tr></thead>
       <tbody id="seatsTable"></tbody>
     </table>
-    <p class="muted">Uwaga: aktualne kwoty i prowadzący znajdują się w sekcji <strong>CONFIG</strong> na górze skryptu — edytuj je tam lub użyj panelu "Edytuj".</p>
   </div>
 
   <div class="card">
     <h2>Wejdź i wygeneruj kod licytacji</h2>
-    <div class="note">Zaloguj się, wpisując swoje imię i nazwisko (to nie jest prawdziwy system auth, tylko lokalne zapamiętanie).</div>
-
     <label>Twoje imię i nazwisko</label>
     <div class="row">
       <input id="fullname" placeholder="np. Jan Kowalski" />
@@ -59,12 +54,15 @@
       <div id="nameSaved" class="muted"></div>
     </div>
 
-    <label>Wybierz miejsce (na które chcesz wygenerować kod)</label>
+    <label>Wybierz miejsce</label>
     <select id="seatSelect"></select>
+
+    <!-- NOWE: pole do wpisania oferty -->
+    <label>Twoja oferta (zł)</label>
+    <input type="number" id="userBid" min="1" />
 
     <label>Miejsce odbioru</label>
     <select id="pickupSelect"></select>
-
     <div id="customKmRow" style="display:none; margin-top:8px">
       <label>Ile km od wybranego miejsca (liczba całkowita)</label>
       <input type="number" id="customKm" min="0" value="0" />
@@ -81,73 +79,50 @@
       <div style="margin-top:6px">Kod do wysłania SMS: <strong id="shortCode"></strong>
         <button class="btn-ghost" id="copyBtn">Kopiuj</button><span id="copyOK" class="copyok" style="display:none">Skopiowano!</span>
       </div>
-      <p style="margin-top:8px">Wyślij powyższy kod SMS-em na numer: <strong id="phoneView"></strong> aby zatwierdzić podbicie licytacji.</p>
+      <p style="margin-top:8px">Wyślij powyższy kod SMS-em na numer: <strong id="phoneView"></strong></p>
     </div>
   </div>
 
-  <div class="card">
+  <!-- PANEL ADMINA -->
+  <div class="card" id="adminCard" style="display:none">
     <div class="row">
       <h3 style="margin:0">Panel admina (szybka edycja zmiennych)</h3>
       <div class="spacer"></div>
       <button class="admin-toggle" id="toggleAdmin">Pokaż/Ukryj</button>
     </div>
-
     <div id="adminPanel" class="admin-panel" style="display:none">
-      <div class="muted">Edytuj kwoty i nazwy prowadzących. To tylko lokalna edycja (w pamięci przeglądarki). Aby trwale zmienić, edytuj sekcję <code>CONFIG</code> w skrypcie nad stroną.</div>
+      <div class="muted">Edytuj kwoty i nazwy prowadzących (lokalnie).</div>
       <div id="adminSeats"></div>
       <div style="margin-top:8px" class="row">
-        <button class="btn" id="saveAdmin">Zapisz zmiany (tylko lokalnie)</button>
-        <button class="btn-ghost" id="resetConfig">Resetuj do wartości z CONFIG</button>
+        <button class="btn" id="saveAdmin">Zapisz zmiany</button>
+        <button class="btn-ghost" id="resetConfig">Resetuj</button>
       </div>
     </div>
   </div>
 
   <footer>
-    <div class="muted">Licytacja trwa do 29 sierpnia 2025, 15:00 (Europe/Warsaw).</div>
-    <div class="muted">Gotowe do wrzucenia na GitHub Pages jako <code>index.html</code>.</div>
+    <div class="muted">Licytacja trwa do 29 sierpnia 2025, 15:00.</div>
   </footer>
 
   <script>
-    /*************************************************************************
-     * KONFIGURACJA (edytuj TYLKO tutaj, na samej górze skryptu)            *
-     * - Aktualne kwoty i prowadzący dla każdego miejsca                  *
-     * - Data zakończenia licytacji                                       *
-     * - Numer telefonu do wysyłania SMS                                  *
-     * - Opcje miejsc odbioru i stawka za każdy dodatkowy km               *
-     *************************************************************************/
-
     const CONFIG = {
-      // CZTERY wolne miejsca (oprócz kierowcy) — edytuj wartości tutaj
       seats: [
         { id: 'seat1', label: 'Miejsce 1', currentBid: 30, leader: 'Anna Nowak' },
         { id: 'seat2', label: 'Miejsce 2', currentBid: 28, leader: 'Piotr K.' },
         { id: 'seat3', label: 'Miejsce 3', currentBid: 25, leader: '—' },
         { id: 'seat4', label: 'Miejsce 4', currentBid: 20, leader: '—' }
       ],
-
-      // Koniec licytacji: ustaw dokładnie (rok-miesiąc-dzieńTczass+offset)
       auctionEndISO: '2025-08-29T15:00:00+02:00',
-
-      // Numer telefonu, na który użytkownicy wysyłają kod SMS
       phoneNumber: '797318071',
-
-      // Dopłata za każdy kilometr (z własnego punktu odbioru)
       extraPerKm: 1,
-
-      // Opcje miejsc odbioru (jeśli wybierzesz "Własne miejsce", pojawi się pole na km)
       pickupOptions: [
         { id: 'centrum', label: 'Częstochowa - centrum', extraKm: 0 },
         { id: 'polnoc', label: 'Częstochowa - północ', extraKm: 0 },
         { id: 'dworzec', label: 'Częstochowa - Dworzec PKS', extraKm: 0 },
-        { id: 'custom', label: 'Własne miejsce (wpisz ile km od powyższych)', extraKm: null }
+        { id: 'custom', label: 'Własne miejsce (wpisz ile km)', extraKm: null }
       ]
     };
 
-    /*************************************************************************
-     * KONIEC KONFIGURACJI                                                      *
-     *************************************************************************/
-
-    // --- helpery i inicjalizacja UI ---
     const seatsTable = document.getElementById('seatsTable');
     const seatSelect = document.getElementById('seatSelect');
     const pickupSelect = document.getElementById('pickupSelect');
@@ -157,6 +132,8 @@
     const phoneView = document.getElementById('phoneView');
     const countdownEl = document.getElementById('countdown');
     const endDateText = document.getElementById('endDateText');
+    const generateBtn = document.getElementById('generateBtn');
+    const adminCard = document.getElementById('adminCard');
 
     function renderSeatsTable(seats){
       seatsTable.innerHTML = '';
@@ -170,27 +147,29 @@
     function populateSelects(seats){
       seatSelect.innerHTML = '';
       seats.forEach(s=>{
-        const opt = document.createElement('option'); opt.value = s.id; opt.textContent = `${s.label} — ${s.currentBid} zł`;
+        const opt = document.createElement('option');
+        opt.value = s.id; opt.textContent = `${s.label} — ${s.currentBid} zł`;
         seatSelect.appendChild(opt);
       });
-
       pickupSelect.innerHTML = '';
       CONFIG.pickupOptions.forEach(p=>{
         const opt = document.createElement('option'); opt.value = p.id; opt.textContent = p.label;
         pickupSelect.appendChild(opt);
       });
-
       extraPerKmView.textContent = CONFIG.extraPerKm;
       phoneView.textContent = CONFIG.phoneNumber;
       endDateText.textContent = new Date(CONFIG.auctionEndISO).toLocaleString('pl-PL', {timeZone:'Europe/Warsaw'});
     }
 
-    // --- countdown ---
     const auctionEndDate = new Date(CONFIG.auctionEndISO);
     function updateCountdown(){
       const now = new Date();
       const diff = auctionEndDate - now;
-      if(diff<=0){ countdownEl.textContent = 'Licytacja zakończona'; return; }
+      if(diff<=0){
+        countdownEl.textContent = 'Licytacja zakończona';
+        generateBtn.disabled = true;
+        return;
+      }
       const d = Math.floor(diff/1000/60/60/24);
       const h = Math.floor(diff/1000/60/60)%24;
       const m = Math.floor(diff/1000/60)%60;
@@ -199,9 +178,7 @@
     }
     setInterval(updateCountdown,1000);
 
-    // --- generate short code ---
     function generateShortCode(fullName, amount){
-      // format: Imię + pierwsza litera nazwiska, np: JanK,45zł
       const parts = fullName.trim().split(/\s+/);
       if(parts.length===0) return '';
       const first = parts[0];
@@ -209,112 +186,52 @@
       return `${first}${lastInitial},${amount}zł`;
     }
 
-    // --- main action: user clicks Licytuj ---
-    document.getElementById('generateBtn').addEventListener('click', ()=>{
+    generateBtn.addEventListener('click', ()=>{
+      if(new Date() > auctionEndDate){ alert("Licytacja zakończona."); return; }
       const fullname = (document.getElementById('fullname').value || '').trim();
-      if(!fullname){ alert('Wpisz swoje imię i nazwisko przed wygenerowaniem kodu.'); return; }
+      if(!fullname){ alert('Wpisz imię i nazwisko.'); return; }
       const seatId = seatSelect.value;
       const seat = CONFIG.seats.find(s=>s.id===seatId);
       if(!seat){ alert('Nie znaleziono miejsca.'); return; }
+      const userBid = Number(document.getElementById('userBid').value);
+      if(!userBid || userBid <= seat.currentBid){
+        alert(`Twoja oferta musi być większa niż ${seat.currentBid} zł`); return;
+      }
       const pickup = pickupSelect.value;
       let extraKm = 0;
-      if(pickup==='custom'){
-        extraKm = parseInt(customKmInput.value)||0;
-      } else {
-        // opcjonalnie można tu policzyć distance z pickupOptions.extraKm
-        const pick = CONFIG.pickupOptions.find(p=>p.id===pickup);
-        extraKm = pick && pick.extraKm? pick.extraKm: 0;
-      }
-      const total = Number(seat.currentBid) + (extraKm * Number(CONFIG.extraPerKm));
+      if(pickup==='custom'){ extraKm = parseInt(customKmInput.value)||0; }
+      const total = userBid + (extraKm * CONFIG.extraPerKm);
       document.getElementById('totalAmount').textContent = total;
-
       const code = generateShortCode(fullname, total);
       document.getElementById('shortCode').textContent = code;
       document.getElementById('result').style.display = 'block';
     });
 
-    // --- copy to clipboard ---
-    document.getElementById('copyBtn').addEventListener('click', async ()=>{
-      const text = document.getElementById('shortCode').textContent;
-      try{
-        await navigator.clipboard.writeText(text);
-        document.getElementById('copyOK').style.display = 'inline';
-        setTimeout(()=>document.getElementById('copyOK').style.display='none',2000);
-      }catch(e){ alert('Nie udało się skopiować. Skopiuj ręcznie.'); }
-    });
-
-    // --- name save to localStorage ---
+    // admin widoczny tylko dla "tylko przejazd"
     document.getElementById('saveNameBtn').addEventListener('click', ()=>{
       const v = (document.getElementById('fullname').value || '').trim();
       if(!v){ alert('Wpisz imię i nazwisko.'); return; }
       localStorage.setItem('licytacja_fullname', v);
       document.getElementById('nameSaved').textContent = 'Zapisano lokalnie.';
       setTimeout(()=>document.getElementById('nameSaved').textContent='',1500);
+      if(v.toLowerCase()==="tylko przejazd"){ adminCard.style.display='block'; }
     });
 
-    // --- admin panel toggles and quick edit ---
-    document.getElementById('toggleAdmin').addEventListener('click', ()=>{
-      const p = document.getElementById('adminPanel'); p.style.display = p.style.display==='none'?'block':'none';
-      if(p.style.display==='block') renderAdminInputs();
-    });
-
-    function renderAdminInputs(){
-      const root = document.getElementById('adminSeats'); root.innerHTML = '';
-      CONFIG.seats.forEach((s,idx)=>{
-        const div = document.createElement('div'); div.style.marginTop='8px';
-        div.innerHTML = `
-          <label>${s.label}</label>
-          <div class="row">
-            <input data-seatidx="${idx}" class="admin-leader" value="${s.leader}" />
-            <input type="number" data-seatidx="${idx}" class="admin-bid" value="${s.currentBid}" />
-          </div>`;
-        root.appendChild(div);
-      });
-    }
-
-    document.getElementById('saveAdmin').addEventListener('click', ()=>{
-      // update CONFIG object in memory and re-render UI
-      document.querySelectorAll('.admin-bid').forEach(inp=>{
-        const idx = Number(inp.dataset.seatidx); CONFIG.seats[idx].currentBid = Number(inp.value)||0;
-      });
-      document.querySelectorAll('.admin-leader').forEach(inp=>{
-        const idx = Number(inp.dataset.seatidx); CONFIG.seats[idx].leader = inp.value || '—';
-      });
-      // save to localStorage so values persist for this browser
-      localStorage.setItem('licytacja_config', JSON.stringify(CONFIG));
-      populateSelects(CONFIG.seats);
-      renderSeatsTable(CONFIG.seats);
-      alert('Zapisano lokalnie (w localStorage). Aby trwale zmienić, edytuj sekcję CONFIG w kodzie.');
-    });
-
-    document.getElementById('resetConfig').addEventListener('click', ()=>{
-      localStorage.removeItem('licytacja_config');
-      loadInitialConfig();
-      alert('Przywrócono wartości z CONFIG.');
-    });
-
-    // --- handle pickup select -> show/hide custom km ---
     pickupSelect.addEventListener('change', ()=>{
       if(pickupSelect.value==='custom') customKmRow.style.display='block'; else customKmRow.style.display='none';
     });
 
-    // --- load config from localStorage if istnieje ---
     function loadInitialConfig(){
-      const saved = localStorage.getItem('licytacja_config');
-      if(saved){
-        try{ const parsed = JSON.parse(saved); Object.assign(CONFIG, parsed); }
-        catch(e){ console.warn('błąd odczytu config z localstorage', e); }
-      }
       renderSeatsTable(CONFIG.seats);
       populateSelects(CONFIG.seats);
       updateCountdown();
-      // preload saved name
-      const savedName = localStorage.getItem('licytacja_fullname'); if(savedName) document.getElementById('fullname').value = savedName;
+      const savedName = localStorage.getItem('licytacja_fullname');
+      if(savedName){ 
+        document.getElementById('fullname').value = savedName; 
+        if(savedName.toLowerCase()==="tylko przejazd"){ adminCard.style.display='block'; }
+      }
     }
-
-    // initialize
     loadInitialConfig();
-
   </script>
 </body>
 </html>
