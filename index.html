@@ -1,4 +1,5 @@
 <!doctype html>
+
 <html lang="pl">
 <head>
   <meta charset="utf-8" />
@@ -30,84 +31,71 @@
 </head>
 <body>
   <h1>Licytacja miejsc – Częstochowa → Radostków‑Kolonia</h1>
-  <p class="muted">Strona statyczna (prototyp). Dla hostingu użyj GitHub Pages – wrzuć ten plik jako <code>index.html</code> do repo i włącz Pages.</p>
-
-  <div class="card">
+  <p class="muted">Strona statyczna (prototyp). Dla hostingu użyj GitHub Pages – wrzuć ten plik jako <code>index.html</code> do repo i włącz Pages.</p>  <div class="card">
     <h2>Status licytacji</h2>
     <div class="row">
       <div>Do zakończenia:</div>
       <div class="countdown" id="countdown">ładowanie...</div>
       <div class="spacer"></div>
       <div class="muted">Koniec: <span id="endDateText"></span></div>
-    </div>
+    </div><table>
+  <thead><tr><th>Miejsce</th><th>Aktualna kwota</th><th>Prowadzący</th></tr></thead>
+  <tbody id="seatsTable"></tbody>
+</table>
+<p class="muted">Uwaga: aktualne kwoty i prowadzący znajdują się w sekcji <strong>CONFIG</strong> na górze skryptu — edytuj je tam lub użyj panelu "Edytuj".</p>
 
-    <table>
-      <thead><tr><th>Miejsce</th><th>Aktualna kwota</th><th>Prowadzący</th></tr></thead>
-      <tbody id="seatsTable"></tbody>
-    </table>
-    <p class="muted">Uwaga: aktualne kwoty i prowadzący znajdują się w sekcji <strong>CONFIG</strong> na górze skryptu — edytuj je tam lub użyj panelu "Edytuj".</p>
-  </div>
-
-  <div class="card">
+  </div>  <div class="card">
     <h2>Wejdź i wygeneruj kod licytacji</h2>
-    <div class="note">Zaloguj się, wpisując swoje imię i nazwisko (to nie jest prawdziwy system auth, tylko lokalne zapamiętanie).</div>
+    <div class="note">Zaloguj się, wpisując swoje imię i nazwisko (to nie jest prawdziwy system auth, tylko lokalne zapamiętanie).</div><label>Twoje imię i nazwisko</label>
+<div class="row">
+  <input id="fullname" placeholder="np. Jan Kowalski" />
+  <button class="btn" id="saveNameBtn">Zapisz</button>
+  <div id="nameSaved" class="muted"></div>
+</div>
 
-    <label>Twoje imię i nazwisko</label>
-    <div class="row">
-      <input id="fullname" placeholder="np. Jan Kowalski" />
-      <button class="btn" id="saveNameBtn">Zapisz</button>
-      <div id="nameSaved" class="muted"></div>
-    </div>
+<label>Wybierz miejsce (na które chcesz wygenerować kod)</label>
+<select id="seatSelect"></select>
 
-    <label>Wybierz miejsce (na które chcesz wygenerować kod)</label>
-    <select id="seatSelect"></select>
+<label>Miejsce odbioru</label>
+<select id="pickupSelect"></select>
 
-    <label>Miejsce odbioru</label>
-    <select id="pickupSelect"></select>
+<div id="customKmRow" style="display:none; margin-top:8px">
+  <label>Ile km od wybranego miejsca (liczba całkowita)</label>
+  <input type="number" id="customKm" min="0" value="0" />
+</div>
 
-    <div id="customKmRow" style="display:none; margin-top:8px">
-      <label>Ile km od wybranego miejsca (liczba całkowita)</label>
-      <input type="number" id="customKm" min="0" value="0" />
-    </div>
+<div style="margin-top:10px" class="row">
+  <button class="btn" id="generateBtn">Licytuj (generuj kod)</button>
+  <div class="spacer"></div>
+  <div class="muted">Dopłata/km: <span id="extraPerKmView"></span> zł</div>
+</div>
 
-    <div style="margin-top:10px" class="row">
-      <button class="btn" id="generateBtn">Licytuj (generuj kod)</button>
-      <div class="spacer"></div>
-      <div class="muted">Dopłata/km: <span id="extraPerKmView"></span> zł</div>
-    </div>
-
-    <div id="result" class="card" style="display:none;margin-top:12px">
-      <div class="big">Łączna kwota: <span id="totalAmount"></span> zł</div>
-      <div style="margin-top:6px">Kod do wysłania SMS: <strong id="shortCode"></strong>
-        <button class="btn-ghost" id="copyBtn">Kopiuj</button><span id="copyOK" class="copyok" style="display:none">Skopiowano!</span>
-      </div>
-      <p style="margin-top:8px">Wyślij powyższy kod SMS-em na numer: <strong id="phoneView"></strong> aby zatwierdzić podbicie licytacji.</p>
-    </div>
+<div id="result" class="card" style="display:none;margin-top:12px">
+  <div class="big">Łączna kwota: <span id="totalAmount"></span> zł</div>
+  <div style="margin-top:6px">Kod do wysłania SMS: <strong id="shortCode"></strong>
+    <button class="btn-ghost" id="copyBtn">Kopiuj</button><span id="copyOK" class="copyok" style="display:none">Skopiowano!</span>
   </div>
+  <p style="margin-top:8px">Wyślij powyższy kod SMS-em na numer: <strong id="phoneView"></strong> aby zatwierdzić podbicie licytacji.</p>
+</div>
 
-  <div class="card">
+  </div>  <div class="card">
     <div class="row">
       <h3 style="margin:0">Panel admina (szybka edycja zmiennych)</h3>
       <div class="spacer"></div>
       <button class="admin-toggle" id="toggleAdmin">Pokaż/Ukryj</button>
-    </div>
-
-    <div id="adminPanel" class="admin-panel" style="display:none">
-      <div class="muted">Edytuj kwoty i nazwy prowadzących. To tylko lokalna edycja (w pamięci przeglądarki). Aby trwale zmienić, edytuj sekcję <code>CONFIG</code> w skrypcie nad stroną.</div>
-      <div id="adminSeats"></div>
-      <div style="margin-top:8px" class="row">
-        <button class="btn" id="saveAdmin">Zapisz zmiany (tylko lokalnie)</button>
-        <button class="btn-ghost" id="resetConfig">Resetuj do wartości z CONFIG</button>
-      </div>
-    </div>
+    </div><div id="adminPanel" class="admin-panel" style="display:none">
+  <div class="muted">Edytuj kwoty i nazwy prowadzących. To tylko lokalna edycja (w pamięci przeglądarki). Aby trwale zmienić, edytuj sekcję <code>CONFIG</code> w skrypcie nad stroną.</div>
+  <div id="adminSeats"></div>
+  <div style="margin-top:8px" class="row">
+    <button class="btn" id="saveAdmin">Zapisz zmiany (tylko lokalnie)</button>
+    <button class="btn-ghost" id="resetConfig">Resetuj do wartości z CONFIG</button>
   </div>
+</div>
 
-  <footer>
+  </div>  <footer>
     <div class="muted">Licytacja trwa do 29 sierpnia 2025, 15:00 (Europe/Warsaw).</div>
     <div class="muted">Gotowe do wrzucenia na GitHub Pages jako <code>index.html</code>.</div>
-  </footer>
-
-  <script>
+  </footer>  <script>
     /*************************************************************************
      * KONFIGURACJA (edytuj TYLKO tutaj, na samej górze skryptu)            *
      * - Aktualne kwoty i prowadzący dla każdego miejsca                  *
@@ -315,6 +303,5 @@
     // initialize
     loadInitialConfig();
 
-  </script>
-</body>
+  </script></body>
 </html>
