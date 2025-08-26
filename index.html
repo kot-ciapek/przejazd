@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Licytacja miejsc</title>
+  <title>Licytacja miejsc w I30</title>
   <style>
     :root{font-family:Inter,system-ui,Arial,Helvetica,sans-serif;color:#111}
     body{max-width:920px;margin:28px auto;padding:18px}
@@ -53,23 +53,23 @@
     <h2>Wejdź i wygeneruj kod licytacji</h2>
     <label>Twoje imię i nazwisko</label>
     <div class="row">
-      <input id="fullname" placeholder="np. Jan Kowalski" />
+      <input id="fullname" placeholder="np. Adam Starak" />
       <button class="btn" id="saveNameBtn">Zapisz</button>
       <div id="nameSaved" class="muted"></div>
     </div>
 
-    <label>Wybierz miejsce</label>
+    <label>Wybierz miejsce z listy</label>
     <select id="seatSelect"></select>
 
     <!-- pole do wpisania oferty -->
-    <label>Twoja oferta (zł) — minimalny krok: <span id="minStepView">1</span> zł</label>
+    <label>Twoja oferta w Polskich złotych (musi być większa od poprzedniej oferty o conajmniej 10 groszy): </span></label>
     <input type="number" id="userBid" min="1" />
 
     <label>Miejsce odbioru</label>
     <select id="pickupSelect"></select>
     <div id="customKmRow" style="display:none; margin-top:8px">
-      <label>Ile km od wybranego miejsca (liczba całkowita)</label>
-      <input type="number" id="customKm" min="0" value="0" />
+      <label>Ile kilometrów od dowolnego miejsca z listy</label>
+      <input type="number" id="customKm" min="1" value="0" />
     </div>
 
     <div style="margin-top:10px" class="row">
@@ -118,13 +118,13 @@
 
     const DEFAULT_CONFIG = {
       seats: [
-        { id: 'seat1', label: 'Miejsce 1', currentBid: 30, leader: 'Anna Nowak' },
-        { id: 'seat2', label: 'Miejsce 2', currentBid: 28, leader: 'Piotr K.' },
-        { id: 'seat3', label: 'Miejsce 3', currentBid: 25, leader: '—' },
-        { id: 'seat4', label: 'Miejsce 4', currentBid: 20, leader: '—' }
+        { id: 'seat1', label: 'Fotel obok najlepszego kierowcy 😎', currentBid: 0, leader: '(puste)' },
+        { id: 'seat2', label: 'Miejsce z tyłu za pasażerem', currentBid: 0, leader: '(puste)' },
+        { id: 'seat3', label: 'Miejsce na środku z tyłu', currentBid: 0, leader: '(puste)' },
+        { id: 'seat4', label: 'Miejsce za super kierowcą', currentBid: 0, leader: '(puste)' }
       ],
       auctionEndISO: '2025-08-29T15:00:00+02:00',
-      phoneNumber: '797318071',
+      phoneNumber: '+48 797318071',
       extraPerKm: 1,
       pickupOptions: [
         { id: 'centrum', label: 'Częstochowa - centrum', extraKm: 0 },
