@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Licytacja miejsc na przejazd — HTML + Stripe (demo)</title>
+  <title>Licytacja miejsc na przejazd — HTML (poprawione)</title>
   <style>
     :root{--bg:#f8fafc;--card:#ffffff;--muted:#64748b;--accent:#4f46e5;--success:#16a34a;--danger:#ef4444}
     *{box-sizing:border-box}
@@ -76,8 +76,8 @@
       <h3 style="margin:0 0 8px 0">Wpisz swoje imię i nazwisko</h3>
       <form id="loginForm">
         <div style="display:flex;gap:8px">
-          <input id="firstName" placeholder="Imię" />
-          <input id="lastName" placeholder="Nazwisko" />
+          <input id="firstName" placeholder="Imię" autocomplete="given-name" />
+          <input id="lastName" placeholder="Nazwisko" autocomplete="family-name" />
         </div>
         <div style="display:flex;gap:8px;margin-top:10px">
           <button type="submit">Zaloguj</button>
@@ -89,11 +89,8 @@
   </div>
 
   <script>
-    const STORAGE_KEY = 'car_seat_auctions_html_v1_v3';
+    const STORAGE_KEY = 'car_seat_auctions_html_v1_v4';
     const USER_KEY = 'car_seat_user_v1';
-
-    // If you want cross-machine sync, run a backend that exposes /seats (GET/POST) and /create-checkout-session
-    // This frontend will try to talk to that backend; if it isn't available it'll fall back to localStorage.
 
     function escapeHtml(str){ return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
 
@@ -105,7 +102,7 @@
 
     // --- seats storage ---
     async function loadSeatsLocal(){ try{ const raw = localStorage.getItem(STORAGE_KEY); if(!raw) return sampleSeats(); return JSON.parse(raw);}catch(e){ return sampleSeats(); }}
-    function sampleSeats(){ return [ { id:1, title:'Miejsce w przodzie, obok najlepszego kierowcy 😎', basePrice:0.20, durationSec:120, status:'ready', highestBid:0, highestBidder:null, endTime:null}, { id:2, title:'Miejsce z tyłu za kierowcą', basePrice:0.20, durationSec:120, status:'ready', highestBid:0, highestBidder:null, endTime:null}, { id:3, title:'Miejsce z tyłu na środku', basePrice:0.20, durationSec:120, status:'ready', highestBid:0, highestBidder:null, endTime:null}, { id:4, title:'Miejsce z tyłu za pasażerem', basePrice:0.20, durationSec:120, status:'ready', highestBid:0, highestBidder:null, endTime:null}, { id:5, title:'Apartament w rejonie miejsca na koło zapasowe', basePrice:500, durationSec:120, status:'ready', highestBid:0, highestBidder:null, endTime:null}]; }
+    function sampleSeats(){ return [ { id:1, title:'Miejsce w przodzie, obok najlepszego kierowcy 😎', basePrice:0.20, durationSec:120, status:'ready', highestBid:0, highestBidder:null, endTime:null}, { id:2, title:'Miejsce z tyłu za kierowcą', basePrice:0.20, durationSec:120, status:'ready', highestBid:0, highestBidder:null, endTime:null} ]; }
 
     let seats = [];
     const listEl = document.getElementById('list');
@@ -115,17 +112,25 @@
     function formatTimeLeft(endTime){ if(!endTime) return ''; const left = Math.max(0, Math.round((endTime - Date.now())/1000)); const mm = String(Math.floor(left/60)).padStart(2,'0'); const ss = String(left%60).padStart(2,'0'); return `${mm}:${ss}`; }
     function nextMinBid(seat){ return Math.max(seat.basePrice, seat.highestBid || 0) + 1; }
 
-    // Try to fetch seats from server. If server responds, replace local copy and saveLocal.
+    // Try to fetch seats from server. If server responds with JSON, replace local copy and saveLocal.
     async function fetchSeatsFromServer(){
       try{
         const res = await fetch('/seats');
         if(!res.ok) throw new Error('no server');
+        const ct = (res.headers.get('content-type')||'').toLowerCase();
+        if(!ct.includes('application/json')) throw new Error('not json');
         const remote = await res.json();
-        seats = remote;
-        saveLocal();
-        render();
-        return true;
-      }catch(e){ return false; }
+        if(Array.isArray(remote)){
+          seats = remote;
+          saveLocal();
+          render();
+          return true;
+        }
+        return false;
+      }catch(e){
+        // server not available or returned HTML (e.g. GitHub Pages) — ignore silently
+        return false;
+      }
     }
 
     // Try to push local seats to server (POST /seats). Returns true on success.
@@ -137,7 +142,7 @@
       }catch(e){ return false; }
     }
 
-    // render + controls
+    // render + controls (DO NOT touch login inputs/modal here)
     function render(){
       const now = Date.now();
       seats = seats.map(s => (s.status==='ongoing' && s.endTime && now>=s.endTime) ? ({...s,status:'ended'}) : s);
@@ -195,7 +200,6 @@
 
     function renderControls(seat, isAdmin){
       if(seat.status==='ready'){
-        // only admin may start and edit
         if(isAdmin){
           return `<button data-start class="">Start licytacji</button> <button data-edit class="inline ghost">Edytuj</button> <button data-duration class="inline ghost">Zmień czas</button>`;
         }
@@ -210,7 +214,6 @@
             <div class="err muted small" style="width:100%"></div>
           </form>`;
       }
-      // seat.status === 'ended' — pokaż przycisk płatności do zapłacenia przez zwycięzcę
       return `<div class="small">Wygrał: <strong>${escapeHtml(seat.highestBidder) || '—'}</strong> za <strong>${seat.highestBid?seat.highestBid+' zł':'—'}</strong>
         <div style="margin-top:6px">
           <button data-pay class="success">Zapłać (Stripe Checkout)</button>
@@ -230,13 +233,8 @@
     async function placeBid(id, bidderName, amount, errEl){ if(!bidderName){ if(errEl) errEl.textContent='Podaj swoje imię/id'; return; } if(!Number.isFinite(amount) || amount <= 0){ if(errEl) errEl.textContent='Podaj poprawną kwotę'; return; }
       let updated=false; const now = Date.now(); seats = seats.map(s => { if(s.id!==id) return s; const min = Math.max(s.basePrice, s.highestBid || 0) + 1; if(amount < min){ if(errEl) errEl.textContent = `Kwota za mała — minimalnie ${min} zł`; return s; } let newEnd = s.endTime; if(s.status==='ongoing' && s.endTime && (s.endTime - now) <= SNIP_PROTECT_WINDOW_MS){ newEnd = s.endTime + SNIP_EXTENSION_MS; } updated = true; if(errEl) errEl.textContent = ''; return {...s, highestBid: amount, highestBidder: bidderName, endTime: newEnd, status:'ongoing'}; }); if(updated){ saveLocal(); await pushSeatsToServer(); render(); } }
 
-    // Allow admin to edit title/base/duration before starting or even after
-    async function editSeat(id){ const user = getCurrentUser(); if(!isAdmin(user)){ alert('Tylko administrator może edytować aukcje'); return; } const seat = seats.find(s=>s.id===id); if(!seat) return; const title = prompt('Nowa nazwa miejsca:', seat.title); if(title===null) return; const base = Number(prompt('Nowa cena wywoławcza (zł):', seat.basePrice)); if(Number.isFinite(base)) seat.basePrice = base; const durMin = Number(prompt('Czas trwania (minuty):', (seat.durationSec/60).toFixed(1))); if(Number.isFinite(durMin) && durMin>0){ seat.durationSec = Math.max(10, Math.round(durMin*60)); // if ongoing, restart timer to new duration
-      if(seat.status==='ongoing'){ seat.endTime = Date.now() + seat.durationSec*1000; }
-    }
-    seat.title = title.trim() || seat.title; saveLocal(); await pushSeatsToServer(); render(); }
+    async function editSeat(id){ const user = getCurrentUser(); if(!isAdmin(user)){ alert('Tylko administrator może edytować aukcje'); return; } const seat = seats.find(s=>s.id===id); if(!seat) return; const title = prompt('Nowa nazwa miejsca:', seat.title); if(title===null) return; const base = Number(prompt('Nowa cena wywoławcza (zł):', seat.basePrice)); if(Number.isFinite(base)) seat.basePrice = base; const durMin = Number(prompt('Czas trwania (minuty):', (seat.durationSec/60).toFixed(1))); if(Number.isFinite(durMin) && durMin>0){ seat.durationSec = Math.max(10, Math.round(durMin*60)); if(seat.status==='ongoing'){ seat.endTime = Date.now() + seat.durationSec*1000; } } seat.title = title.trim() || seat.title; saveLocal(); await pushSeatsToServer(); render(); }
 
-    // Separate change duration prompt (explicit)
     async function changeDurationPrompt(id){ const user = getCurrentUser(); if(!isAdmin(user)){ alert('Tylko administrator może zmieniać czas aukcji'); return; } const seat = seats.find(s=>s.id===id); if(!seat) return; const durMin = prompt('Ustaw nowy czas trwania (minuty). Uwaga: jeśli aukcja jest już trwająca, jej timer zostanie ustawiony na nowy czas (restart).', (seat.durationSec/60).toFixed(1)); if(durMin===null) return; const parsed = Number(durMin); if(!Number.isFinite(parsed) || parsed <= 0){ alert('Niepoprawna wartość'); return; } seat.durationSec = Math.max(10, Math.round(parsed*60)); if(seat.status==='ongoing'){ seat.endTime = Date.now() + seat.durationSec*1000; } saveLocal(); await pushSeatsToServer(); render(); }
 
     // --- PŁATNOŚCI (Stripe Checkout demo) ---
@@ -252,14 +250,36 @@
         const res = await fetch('/create-checkout-session', {
           method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ seatId })
         });
-        const data = await res.json();
-        if(data.url){ window.location = data.url; }
-        else if(data.error){ alert('Błąd tworzenia sesji płatności: ' + data.error); }
-      }catch(e){ alert('Błąd sieci: ' + e.message); }
+
+        // jeśli serwer zwraca JSON -> oczekiwane
+        const ct = (res.headers.get('content-type')||'').toLowerCase();
+        if(res.ok && ct.includes('application/json')){
+          const data = await res.json();
+          if(data.url){ window.location = data.url; return; }
+          if(data.error) { alert('Błąd tworzenia sesji płatności: ' + data.error); return; }
+        }
+
+        // jeśli tu jesteśmy, serwer nie zwrócił JSON (np. GitHub Pages zwrócił HTML) lub nie działa
+        // pokaż użytkownikowi przyjazny komunikat i zaproponuj tryb demo
+        const tryDemo = confirm('Backend płatności nie odpowiada poprawnym JSON-em (brak serwera lub błąd).
+Czy chcesz zasymulować płatność lokalnie (DEMO)?');
+        if(tryDemo){
+          // prosta symulacja sukcesu płatności — w prawdziwej aplikacji obsłuż webhook na backendzie
+          alert('Symulacja: płatność zakończona powodzeniem.');
+          // oznacz aukcję jako opłacona / zresetuj (tutaj po prostu reset)
+          seats = seats.map(s => s.id===seatId ? ({...s, status:'ready', highestBid:0, highestBidder:null, endTime:null}) : s);
+          saveLocal(); await pushSeatsToServer(); render();
+        }
+      }catch(e){
+        // fetch rzucił wyjątek (np. brak sieci)
+        const tryDemo = confirm('Błąd sieci podczas wywoływania płatności: "' + e.message + '"
+Czy chcesz zasymulować płatność lokalnie (DEMO)?');
+        if(tryDemo){ alert('Symulacja: płatność zakończona powodzeniem.'); seats = seats.map(s => s.id===seatId ? ({...s, status:'ready', highestBid:0, highestBidder:null, endTime:null}) : s); saveLocal(); await pushSeatsToServer(); render(); }
+      }
     }
 
     // synchronization: try server every 3s
-    setInterval(()=>fetchSeatsFromServer(), 3000);
+    setInterval(()=>{ fetchSeatsFromServer(); }, 3000);
 
     // synchronizacja między kartami (localStorage)
     window.addEventListener('storage', (ev)=>{ if(ev.key === STORAGE_KEY){ try{ const remote = JSON.parse(ev.newValue || '[]'); seats = remote; render(); }catch(e){} } });
@@ -270,18 +290,18 @@
     // --- add form handling ---
     document.getElementById('addForm').addEventListener('submit', async ev=>{ ev.preventDefault(); const user = getCurrentUser(); if(!isAdmin(user)){ document.getElementById('addErr').textContent = 'Tylko administrator może dodawać nowe licytacje.'; return; } const nameEl = document.getElementById('seatName'); const baseEl = document.getElementById('basePrice'); const durEl = document.getElementById('duration'); const name = nameEl.value.trim(); const base = Number(baseEl.value) || 0; const durMin = Number(durEl.value) || 1; if(base < 0){ document.getElementById('addErr').textContent = 'Cena wywoławcza musi być >= 0'; return; } if(durMin < 0.1){ document.getElementById('addErr').textContent = 'Czas trwania musi być co najmniej 0.1 minuty'; return; } const seat = { id: Date.now(), title: name || `Miejsce ${seats.length+1}`, basePrice: base, durationSec: Math.max(10, Math.round(durMin*60)), status: 'ready', highestBid:0, highestBidder:null, endTime:null }; seats.unshift(seat); saveLocal(); await pushSeatsToServer(); nameEl.value=''; baseEl.value='10'; durEl.value='2'; nameEl.focus(); render(); });
 
-    // --- login modal handling ---
+    // --- login modal handling (only set overlay display in init / submit / guest) ---
     const loginOverlay = document.getElementById('loginOverlay');
     const loginForm = document.getElementById('loginForm');
     const guestBtn = document.getElementById('guestBtn');
 
-    loginForm.addEventListener('submit', ev=>{ ev.preventDefault(); const first = document.getElementById('firstName').value.trim(); const last = document.getElementById('lastName').value.trim(); if(!first || !last){ alert('Podaj imię i nazwisko'); return; } const user = { first, last }; setCurrentUser(user); loginOverlay.style.display = 'none'; render(); });
-    guestBtn.addEventListener('click', ()=>{ // allow entering as guest (no admin rights)
-      setCurrentUser({ first: 'Gość', last: '' }); loginOverlay.style.display = 'none'; render(); });
+    loginForm.addEventListener('submit', ev=>{ ev.preventDefault(); const firstInput = document.getElementById('firstName'); const lastInput = document.getElementById('lastName'); const first = firstInput.value.trim(); const last = lastInput.value.trim(); if(!first || !last){ alert('Podaj imię i nazwisko'); return; } const user = { first, last }; setCurrentUser(user); loginOverlay.style.display = 'none'; render(); });
+    guestBtn.addEventListener('click', ()=>{ setCurrentUser({ first: 'Gość', last: '' }); loginOverlay.style.display = 'none'; render(); });
 
-    // If user already present, hide login
-    (async function init(){ const local = await loadSeatsLocal(); seats = local; // try to fetch from server initially
-      await fetchSeatsFromServer(); const user = getCurrentUser(); if(user){ loginOverlay.style.display = 'none'; } else { loginOverlay.style.display = 'flex'; } render(); })();
+    // init once
+    (async function init(){ const local = await loadSeatsLocal(); seats = local; await fetchSeatsFromServer(); const user = getCurrentUser(); if(user){ loginOverlay.style.display = 'none'; } else { loginOverlay.style.display = 'flex'; }
+      // do not touch input values here; user can type without interruptions
+      render(); })();
 
     // initial render (fallback)
     render();
@@ -348,19 +368,12 @@
       }catch(err){ console.error(err); res.status(500).json({ error: err.message }); }
     });
 
-    // webhook do potwierdzenia platnosci (opcjonalnie)
     app.post('/webhook', bodyParser.raw({type: 'application/json'}), (req,res)=>{
       // implementuj verification i aktualizacje seats
       res.json({received:true});
     });
 
     app.listen(4242, ()=>console.log('Server running on http://localhost:4242'));
-
-    UWAGI:
-    - Uruchom backend na serwerze widocznym dla wszystkich maszyn, które mają widzieć aukcje.
-    - W trybie testowym Stripe pozwala przetestować płatności bez prawdziwych kart.
-    - Ten przykład używa Stripe jako "dowolnej innej" metody płatności — jeśli chcesz inny provider
-      (PayPal, Przelewy24, Tpay), mogę przygotować odpowiedni endpoint.
   -->
 
 </body>
