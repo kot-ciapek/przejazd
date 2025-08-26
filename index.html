@@ -3,378 +3,318 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Licytacja miejsc na przejazd — HTML (poprawione)</title>
+  <title>Licytacja miejsc — Częstochowa → Radostków-Kolonia</title>
   <style>
-    :root{--bg:#f8fafc;--card:#ffffff;--muted:#64748b;--accent:#4f46e5;--success:#16a34a;--danger:#ef4444}
-    *{box-sizing:border-box}
-    body{font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,'Helvetica Neue',Arial; background:var(--bg); margin:0;padding:24px;color:#0f172a}
-    .container{max-width:980px;margin:0 auto}
-    header{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
-    h1{font-size:20px;margin:0}
-    .card{background:var(--card);border-radius:14px;padding:16px;box-shadow:0 6px 18px rgba(2,6,23,0.06);}    
-    form .row{display:flex;gap:8px}
-    input,button,select,textarea{padding:10px;border-radius:10px;border:1px solid #e6edf3}
-    input{flex:1}
-    button{background:var(--accent);color:#fff;border:none;cursor:pointer}
-    .grid{display:grid;gap:12px;margin-top:12px}
-    .seat{display:flex;gap:12px;align-items:flex-start;padding:12px;border-radius:12px;background:#fff}
-    .seat .left{flex:1}
-    .muted{color:var(--muted);font-size:13px}
-    .status{font-weight:700}
-    .timer{background:#fff3f2;color:var(--danger);padding:6px 10px;border-radius:999px;font-family:monospace}
-    .controls{display:flex;gap:8px;flex-wrap:wrap}
-    .small{font-size:13px}
-    .pill{background:#f1f5f9;padding:6px 10px;border-radius:999px}
-    .ghost{background:#f3f4f6;color:#111;border:0}
-    .success{background:var(--success);color:white}
-    .yellow{background:#f59e0b;color:white}
-    .inline{display:inline-block}
-    .err{color:var(--danger)}
-
-    /* modal */
-    .overlay{position:fixed;inset:0;background:rgba(2,6,23,0.45);display:flex;align-items:center;justify-content:center;z-index:50}
-    .login-box{background:white;padding:20px;border-radius:12px;max-width:420px;width:100%;box-shadow:0 8px 30px rgba(2,6,23,0.3)}
-
-    @media (max-width:700px){.seat{flex-direction:column}}
+    :root{font-family:Inter,system-ui,Arial,Helvetica,sans-serif;color:#111}
+    body{max-width:920px;margin:28px auto;padding:18px}
+    h1,h2{margin:8px 0}
+    .card{border:1px solid #e6e6e6;border-radius:10px;padding:14px;margin:12px 0;box-shadow:0 2px 6px rgba(0,0,0,0.03)}
+    label{display:block;margin:8px 0 4px;font-weight:600}
+    input,select,button{padding:8px 10px;border-radius:8px;border:1px solid #ccc;font-size:15px}
+    .row{display:flex;gap:10px;align-items:center}
+    .spacer{flex:1}
+    table{width:100%;border-collapse:collapse;margin-top:8px}
+    th,td{padding:8px;border-bottom:1px solid #eee;text-align:left}
+    .muted{color:#666;font-size:13px}
+    .big{font-size:20px;font-weight:700}
+    .countdown{font-weight:700;color:#b22222}
+    .copyok{color:green;margin-left:8px}
+    .admin-toggle{background:#f3f3f3;border:0}
+    .admin-panel{margin-top:10px}
+    .btn{background:#0070f3;color:white;border:0;padding:10px 12px;border-radius:8px;cursor:pointer}
+    .btn-ghost{background:transparent;border:1px solid #0070f3;color:#0070f3}
+    .center{text-align:center}
+    footer{margin-top:18px;font-size:13px;color:#444}
+    .note{font-size:13px;color:#333}
   </style>
 </head>
 <body>
-  <div class="container">
-    <header>
-      <div>
-        <h1>Licytacja miejsc w aucie — (wersja HTML)</h1>
-        <div class="muted small">Proszę nie robić sobie żartów z tej strony — używaj odpowiedzialnie.</div>
-      </div>
-      <div style="text-align:right">
-        <div id="userInfo" class="muted small">Nie zalogowano</div>
-        <div id="adminNotice" class="muted small" style="display:none">Jesteś administratorem</div>
-      </div>
-    </header>
+  <h1>Licytacja miejsc – Częstochowa → Radostków‑Kolonia</h1>
+  <p class="muted">Strona statyczna (prototyp). Dla hostingu użyj GitHub Pages – wrzuć ten plik jako <code>index.html</code> do repo i włącz Pages.</p>
 
-    <section id="addSection" class="card">
-      <h2 style="margin:0 0 8px 0;font-size:16px">Dodaj miejsce</h2>
-      <form id="addForm">
-        <div class="row">
-          <input id="seatName" placeholder="Nazwa miejsca (np. tylne lewe)" />
-          <input id="basePrice" type="number" min="0" value="10" style="width:120px" />
-          <input id="duration" type="number" min="0.1" step="0.1" value="2" style="width:120px" />
-          <button id="addBtn">Dodaj</button>
-        </div>
-        <div class="muted small" style="margin-top:8px">Cena wywoławcza (zł) • Czas trwania (minuty)</div>
-        <div id="addErr" class="err small" style="margin-top:6px"></div>
-      </form>
-    </section>
+  <div class="card">
+    <h2>Status licytacji</h2>
+    <div class="row">
+      <div>Do zakończenia:</div>
+      <div class="countdown" id="countdown">ładowanie...</div>
+      <div class="spacer"></div>
+      <div class="muted">Koniec: <span id="endDateText"></span></div>
+    </div>
 
-    <section id="list" class="grid" style="margin-top:16px"></section>
-
-    <footer style="margin-top:14px" class="muted small">Płatności (demo) przez Stripe Checkout (BLIK/inna metoda) — wymaga backendu. Możesz podłączyć własny provider.</footer>
+    <table>
+      <thead><tr><th>Miejsce</th><th>Aktualna kwota</th><th>Prowadzący</th></tr></thead>
+      <tbody id="seatsTable"></tbody>
+    </table>
+    <p class="muted">Uwaga: aktualne kwoty i prowadzący znajdują się w sekcji <strong>CONFIG</strong> na górze skryptu — edytuj je tam lub użyj panelu "Edytuj".</p>
   </div>
 
-  <!-- Login modal (wymagane na początku) -->
-  <div id="loginOverlay" class="overlay">
-    <div class="login-box">
-      <h3 style="margin:0 0 8px 0">Wpisz swoje imię i nazwisko</h3>
-      <form id="loginForm">
-        <div style="display:flex;gap:8px">
-          <input id="firstName" placeholder="Imię" autocomplete="given-name" />
-          <input id="lastName" placeholder="Nazwisko" autocomplete="family-name" />
-        </div>
-        <div style="display:flex;gap:8px;margin-top:10px">
-          <button type="submit">Zaloguj</button>
-          <button type="button" id="guestBtn" class="ghost">Kontynuuj jako gość</button>
-        </div>
-        <div class="muted small" style="margin-top:8px">Twoje dane będą używane lokalnie — to demo.</div>
-      </form>
+  <div class="card">
+    <h2>Wejdź i wygeneruj kod licytacji</h2>
+    <div class="note">Zaloguj się, wpisując swoje imię i nazwisko (to nie jest prawdziwy system auth, tylko lokalne zapamiętanie).</div>
+
+    <label>Twoje imię i nazwisko</label>
+    <div class="row">
+      <input id="fullname" placeholder="np. Jan Kowalski" />
+      <button class="btn" id="saveNameBtn">Zapisz</button>
+      <div id="nameSaved" class="muted"></div>
+    </div>
+
+    <label>Wybierz miejsce (na które chcesz wygenerować kod)</label>
+    <select id="seatSelect"></select>
+
+    <label>Miejsce odbioru</label>
+    <select id="pickupSelect"></select>
+
+    <div id="customKmRow" style="display:none; margin-top:8px">
+      <label>Ile km od wybranego miejsca (liczba całkowita)</label>
+      <input type="number" id="customKm" min="0" value="0" />
+    </div>
+
+    <div style="margin-top:10px" class="row">
+      <button class="btn" id="generateBtn">Licytuj (generuj kod)</button>
+      <div class="spacer"></div>
+      <div class="muted">Dopłata/km: <span id="extraPerKmView"></span> zł</div>
+    </div>
+
+    <div id="result" class="card" style="display:none;margin-top:12px">
+      <div class="big">Łączna kwota: <span id="totalAmount"></span> zł</div>
+      <div style="margin-top:6px">Kod do wysłania SMS: <strong id="shortCode"></strong>
+        <button class="btn-ghost" id="copyBtn">Kopiuj</button><span id="copyOK" class="copyok" style="display:none">Skopiowano!</span>
+      </div>
+      <p style="margin-top:8px">Wyślij powyższy kod SMS-em na numer: <strong id="phoneView"></strong> aby zatwierdzić podbicie licytacji.</p>
     </div>
   </div>
 
+  <div class="card">
+    <div class="row">
+      <h3 style="margin:0">Panel admina (szybka edycja zmiennych)</h3>
+      <div class="spacer"></div>
+      <button class="admin-toggle" id="toggleAdmin">Pokaż/Ukryj</button>
+    </div>
+
+    <div id="adminPanel" class="admin-panel" style="display:none">
+      <div class="muted">Edytuj kwoty i nazwy prowadzących. To tylko lokalna edycja (w pamięci przeglądarki). Aby trwale zmienić, edytuj sekcję <code>CONFIG</code> w skrypcie nad stroną.</div>
+      <div id="adminSeats"></div>
+      <div style="margin-top:8px" class="row">
+        <button class="btn" id="saveAdmin">Zapisz zmiany (tylko lokalnie)</button>
+        <button class="btn-ghost" id="resetConfig">Resetuj do wartości z CONFIG</button>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <div class="muted">Licytacja trwa do 29 sierpnia 2025, 15:00 (Europe/Warsaw).</div>
+    <div class="muted">Gotowe do wrzucenia na GitHub Pages jako <code>index.html</code>.</div>
+  </footer>
+
   <script>
-    const STORAGE_KEY = 'car_seat_auctions_html_v1_v4';
-    const USER_KEY = 'car_seat_user_v1';
+    /*************************************************************************
+     * KONFIGURACJA (edytuj TYLKO tutaj, na samej górze skryptu)            *
+     * - Aktualne kwoty i prowadzący dla każdego miejsca                  *
+     * - Data zakończenia licytacji                                       *
+     * - Numer telefonu do wysyłania SMS                                  *
+     * - Opcje miejsc odbioru i stawka za każdy dodatkowy km               *
+     *************************************************************************/
 
-    function escapeHtml(str){ return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;'); }
+    const CONFIG = {
+      // CZTERY wolne miejsca (oprócz kierowcy) — edytuj wartości tutaj
+      seats: [
+        { id: 'seat1', label: 'Miejsce 1', currentBid: 30, leader: 'Anna Nowak' },
+        { id: 'seat2', label: 'Miejsce 2', currentBid: 28, leader: 'Piotr K.' },
+        { id: 'seat3', label: 'Miejsce 3', currentBid: 25, leader: '—' },
+        { id: 'seat4', label: 'Miejsce 4', currentBid: 20, leader: '—' }
+      ],
 
-    // --- AUTH / user handling ---
-    function getCurrentUser(){ try{ return JSON.parse(localStorage.getItem(USER_KEY) || 'null'); }catch(e){ return null; }}
-    function setCurrentUser(u){ localStorage.setItem(USER_KEY, JSON.stringify(u)); }
-    function clearCurrentUser(){ localStorage.removeItem(USER_KEY); }
-    function isAdmin(user){ if(!user) return false; return (String(user.first||'').toLowerCase() === 'tylko' && String(user.last||'').toLowerCase() === 'przejazd'); }
+      // Koniec licytacji: ustaw dokładnie (rok-miesiąc-dzieńTczass+offset)
+      auctionEndISO: '2025-08-29T15:00:00+02:00',
 
-    // --- seats storage ---
-    async function loadSeatsLocal(){ try{ const raw = localStorage.getItem(STORAGE_KEY); if(!raw) return sampleSeats(); return JSON.parse(raw);}catch(e){ return sampleSeats(); }}
-    function sampleSeats(){ return [ { id:1, title:'Miejsce w przodzie, obok najlepszego kierowcy 😎', basePrice:0.20, durationSec:120, status:'ready', highestBid:0, highestBidder:null, endTime:null}, { id:2, title:'Miejsce z tyłu za kierowcą', basePrice:0.20, durationSec:120, status:'ready', highestBid:0, highestBidder:null, endTime:null} ]; }
+      // Numer telefonu, na który użytkownicy wysyłają kod SMS
+      phoneNumber: '797318071',
 
-    let seats = [];
-    const listEl = document.getElementById('list');
+      // Dopłata za każdy kilometr (z własnego punktu odbioru)
+      extraPerKm: 1,
 
-    function saveLocal(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(seats)); }
+      // Opcje miejsc odbioru (jeśli wybierzesz "Własne miejsce", pojawi się pole na km)
+      pickupOptions: [
+        { id: 'centrum', label: 'Częstochowa - centrum', extraKm: 0 },
+        { id: 'polnoc', label: 'Częstochowa - północ', extraKm: 0 },
+        { id: 'dworzec', label: 'Częstochowa - Dworzec PKS', extraKm: 0 },
+        { id: 'custom', label: 'Własne miejsce (wpisz ile km od powyższych)', extraKm: null }
+      ]
+    };
 
-    function formatTimeLeft(endTime){ if(!endTime) return ''; const left = Math.max(0, Math.round((endTime - Date.now())/1000)); const mm = String(Math.floor(left/60)).padStart(2,'0'); const ss = String(left%60).padStart(2,'0'); return `${mm}:${ss}`; }
-    function nextMinBid(seat){ return Math.max(seat.basePrice, seat.highestBid || 0) + 1; }
+    /*************************************************************************
+     * KONIEC KONFIGURACJI                                                      *
+     *************************************************************************/
 
-    // Try to fetch seats from server. If server responds with JSON, replace local copy and saveLocal.
-    async function fetchSeatsFromServer(){
-      try{
-        const res = await fetch('/seats');
-        if(!res.ok) throw new Error('no server');
-        const ct = (res.headers.get('content-type')||'').toLowerCase();
-        if(!ct.includes('application/json')) throw new Error('not json');
-        const remote = await res.json();
-        if(Array.isArray(remote)){
-          seats = remote;
-          saveLocal();
-          render();
-          return true;
-        }
-        return false;
-      }catch(e){
-        // server not available or returned HTML (e.g. GitHub Pages) — ignore silently
-        return false;
-      }
-    }
+    // --- helpery i inicjalizacja UI ---
+    const seatsTable = document.getElementById('seatsTable');
+    const seatSelect = document.getElementById('seatSelect');
+    const pickupSelect = document.getElementById('pickupSelect');
+    const customKmRow = document.getElementById('customKmRow');
+    const customKmInput = document.getElementById('customKm');
+    const extraPerKmView = document.getElementById('extraPerKmView');
+    const phoneView = document.getElementById('phoneView');
+    const countdownEl = document.getElementById('countdown');
+    const endDateText = document.getElementById('endDateText');
 
-    // Try to push local seats to server (POST /seats). Returns true on success.
-    async function pushSeatsToServer(){
-      try{
-        const res = await fetch('/seats', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(seats) });
-        if(!res.ok) throw new Error('push failed');
-        return true;
-      }catch(e){ return false; }
-    }
-
-    // render + controls (DO NOT touch login inputs/modal here)
-    function render(){
-      const now = Date.now();
-      seats = seats.map(s => (s.status==='ongoing' && s.endTime && now>=s.endTime) ? ({...s,status:'ended'}) : s);
-      saveLocal();
-
-      const user = getCurrentUser();
-      const admin = isAdmin(user);
-
-      // user info
-      const userInfo = document.getElementById('userInfo');
-      const adminNotice = document.getElementById('adminNotice');
-      if(user){ userInfo.textContent = `Zalogowany: ${user.first} ${user.last}`; } else { userInfo.textContent = 'Nie zalogowano'; }
-      adminNotice.style.display = admin ? 'block' : 'none';
-
-      // add section access
-      const addSection = document.getElementById('addSection');
-      const addErr = document.getElementById('addErr');
-      addErr.textContent = '';
-      if(!admin){ addSection.style.opacity = '0.6'; document.getElementById('addBtn').disabled = true; } else { addSection.style.opacity = '1'; document.getElementById('addBtn').disabled = false; }
-
-      listEl.innerHTML = '';
-      if(seats.length===0){ listEl.innerHTML = '<div class="muted">Brak miejsc. Dodaj nowe miejsce powyżej.</div>'; return; }
-
-      seats.forEach(seat=>{
-        const el = document.createElement('div'); el.className='seat card';
-        el.innerHTML = `
-          <div class="left">
-            <div style="display:flex;justify-content:space-between;align-items:center">
-              <div style="font-weight:700">${escapeHtml(seat.title)}</div>
-            </div>
-            <div class="muted small" style="margin-top:6px">Cena wywoławcza: <strong>${seat.basePrice} zł</strong></div>
-            <div style="margin-top:8px">${renderStatus(seat)}</div>
-            <div style="margin-top:8px;background:#f8fafc;padding:8px;border-radius:10px;font-size:14px">Aktualna najwyższa oferta: <strong>${seat.highestBid?seat.highestBid+' zł':'-'}</strong><div class="muted small">Zwycięzca/obecny licytant: ${escapeHtml(seat.highestBidder) || '-'}</div></div>
-            <div class="controls" style="margin-top:10px">${renderControls(seat, admin)}</div>
-          </div>
-          <div style="width:220px;text-align:right">
-            <div class="muted small">Czas trwania: ${(seat.durationSec/60).toFixed(1)} min</div>
-            <div style="margin-top:12px;background:#f1f5f9;padding:10px;border-radius:10px;font-weight:700;text-transform:uppercase">${seat.status}</div>
-          </div>
-        `;
-
-        listEl.appendChild(el);
-
-        const startBtn = el.querySelector('[data-start]'); if(startBtn) startBtn.addEventListener('click', ()=>startAuction(seat.id));
-        const relistBtn = el.querySelector('[data-relist]'); if(relistBtn) relistBtn.addEventListener('click', ()=>relistSeat(seat.id,60));
-        const resetBtn = el.querySelector('[data-reset]'); if(resetBtn) resetBtn.addEventListener('click', ()=>{ resetSeat(seat.id); render(); });
-        const payBtn = el.querySelector('[data-pay]'); if(payBtn) payBtn.addEventListener('click', ()=>startPayment(seat.id));
-        const editBtn = el.querySelector('[data-edit]'); if(editBtn) editBtn.addEventListener('click', ()=>editSeat(seat.id));
-        const durationBtn = el.querySelector('[data-duration]'); if(durationBtn) durationBtn.addEventListener('click', ()=>changeDurationPrompt(seat.id));
-        const bidForm = el.querySelector('form'); if(bidForm) bidForm.addEventListener('submit', ev=>{ ev.preventDefault(); const name = bidForm.querySelector('[name="bidder"]').value.trim(); const amount = Number(bidForm.querySelector('[name="amount"]').value); const errEl = bidForm.querySelector('.err'); placeBid(seat.id, name, amount, errEl); });
+    function renderSeatsTable(seats){
+      seatsTable.innerHTML = '';
+      seats.forEach(s=>{
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${s.label}</td><td>${s.currentBid} zł</td><td>${s.leader}</td>`;
+        seatsTable.appendChild(tr);
       });
     }
 
-    function renderStatus(seat){ if(seat.status==='ready') return `<span class="pill">Gotowe do startu</span>`; if(seat.status==='ongoing') return `<span class="timer">${formatTimeLeft(seat.endTime)}</span>`; if(seat.status==='ended') return `<span class="pill" style="background:#ecfccb;color:#4b7f1a">Zakończone</span>`; return ''; }
+    function populateSelects(seats){
+      seatSelect.innerHTML = '';
+      seats.forEach(s=>{
+        const opt = document.createElement('option'); opt.value = s.id; opt.textContent = `${s.label} — ${s.currentBid} zł`;
+        seatSelect.appendChild(opt);
+      });
 
-    function renderControls(seat, isAdmin){
-      if(seat.status==='ready'){
-        if(isAdmin){
-          return `<button data-start class="">Start licytacji</button> <button data-edit class="inline ghost">Edytuj</button> <button data-duration class="inline ghost">Zmień czas</button>`;
-        }
-        return `<button class="ghost" disabled title="Tylko admin może uruchamiać licytacje">Start (tylko admin)</button>`;
-      }
-      if(seat.status==='ongoing'){
-        const defaultAmount = nextMinBid(seat);
-        return `<form class="row" style="margin-top:6px">
-            <input name="bidder" placeholder="Twoje imię/id" style="flex:1" />
-            <input name="amount" type="number" min="${defaultAmount}" value="${defaultAmount}" style="width:110px" />
-            <button type="submit" class="success">Licytuj</button>
-            <div class="err muted small" style="width:100%"></div>
-          </form>`;
-      }
-      return `<div class="small">Wygrał: <strong>${escapeHtml(seat.highestBidder) || '—'}</strong> za <strong>${seat.highestBid?seat.highestBid+' zł':'—'}</strong>
-        <div style="margin-top:6px">
-          <button data-pay class="success">Zapłać (Stripe Checkout)</button>
-          <button data-relist class="yellow">Wystaw ponownie (+60s)</button>
-          <button data-reset class="ghost">Resetuj</button>
-        </div></div>`;
+      pickupSelect.innerHTML = '';
+      CONFIG.pickupOptions.forEach(p=>{
+        const opt = document.createElement('option'); opt.value = p.id; opt.textContent = p.label;
+        pickupSelect.appendChild(opt);
+      });
+
+      extraPerKmView.textContent = CONFIG.extraPerKm;
+      phoneView.textContent = CONFIG.phoneNumber;
+      endDateText.textContent = new Date(CONFIG.auctionEndISO).toLocaleString('pl-PL', {timeZone:'Europe/Warsaw'});
     }
 
-    async function startAuction(id){ const user = getCurrentUser(); if(!isAdmin(user)){ alert('Tylko administrator może uruchamiać licytacje'); return; } seats = seats.map(s => s.id===id ? ({...s, status:'ongoing', endTime: Date.now() + s.durationSec*1000, highestBid: s.highestBid || s.basePrice}) : s); saveLocal(); await pushSeatsToServer(); render(); }
-    async function relistSeat(id, extraSec=60){ seats = seats.map(s => s.id===id ? ({...s, status:'ongoing', endTime: Date.now() + extraSec*1000, highestBid: s.highestBid || s.basePrice}) : s); saveLocal(); await pushSeatsToServer(); render(); }
-    async function resetSeat(id){ seats = seats.map(s => s.id===id ? ({...s, status:'ready', highestBid:0, highestBidder:null, endTime:null}) : s); saveLocal(); await pushSeatsToServer(); render(); }
+    // --- countdown ---
+    const auctionEndDate = new Date(CONFIG.auctionEndISO);
+    function updateCountdown(){
+      const now = new Date();
+      const diff = auctionEndDate - now;
+      if(diff<=0){ countdownEl.textContent = 'Licytacja zakończona'; return; }
+      const d = Math.floor(diff/1000/60/60/24);
+      const h = Math.floor(diff/1000/60/60)%24;
+      const m = Math.floor(diff/1000/60)%60;
+      const s = Math.floor(diff/1000)%60;
+      countdownEl.textContent = `${d}d ${h}h ${m}m ${s}s`;
+    }
+    setInterval(updateCountdown,1000);
 
-    // Anti-sniping: jeśli oferta wpłynie w ostatnich 10s, wydłuż o 15s
-    const SNIP_PROTECT_WINDOW_MS = 10_000;
-    const SNIP_EXTENSION_MS = 15_000;
+    // --- generate short code ---
+    function generateShortCode(fullName, amount){
+      // format: Imię + pierwsza litera nazwiska, np: JanK,45zł
+      const parts = fullName.trim().split(/\s+/);
+      if(parts.length===0) return '';
+      const first = parts[0];
+      const lastInitial = parts.length>1 ? parts[parts.length-1].charAt(0).toUpperCase() : '';
+      return `${first}${lastInitial},${amount}zł`;
+    }
 
-    async function placeBid(id, bidderName, amount, errEl){ if(!bidderName){ if(errEl) errEl.textContent='Podaj swoje imię/id'; return; } if(!Number.isFinite(amount) || amount <= 0){ if(errEl) errEl.textContent='Podaj poprawną kwotę'; return; }
-      let updated=false; const now = Date.now(); seats = seats.map(s => { if(s.id!==id) return s; const min = Math.max(s.basePrice, s.highestBid || 0) + 1; if(amount < min){ if(errEl) errEl.textContent = `Kwota za mała — minimalnie ${min} zł`; return s; } let newEnd = s.endTime; if(s.status==='ongoing' && s.endTime && (s.endTime - now) <= SNIP_PROTECT_WINDOW_MS){ newEnd = s.endTime + SNIP_EXTENSION_MS; } updated = true; if(errEl) errEl.textContent = ''; return {...s, highestBid: amount, highestBidder: bidderName, endTime: newEnd, status:'ongoing'}; }); if(updated){ saveLocal(); await pushSeatsToServer(); render(); } }
+    // --- main action: user clicks Licytuj ---
+    document.getElementById('generateBtn').addEventListener('click', ()=>{
+      const fullname = (document.getElementById('fullname').value || '').trim();
+      if(!fullname){ alert('Wpisz swoje imię i nazwisko przed wygenerowaniem kodu.'); return; }
+      const seatId = seatSelect.value;
+      const seat = CONFIG.seats.find(s=>s.id===seatId);
+      if(!seat){ alert('Nie znaleziono miejsca.'); return; }
+      const pickup = pickupSelect.value;
+      let extraKm = 0;
+      if(pickup==='custom'){
+        extraKm = parseInt(customKmInput.value)||0;
+      } else {
+        // opcjonalnie można tu policzyć distance z pickupOptions.extraKm
+        const pick = CONFIG.pickupOptions.find(p=>p.id===pickup);
+        extraKm = pick && pick.extraKm? pick.extraKm: 0;
+      }
+      const total = Number(seat.currentBid) + (extraKm * Number(CONFIG.extraPerKm));
+      document.getElementById('totalAmount').textContent = total;
 
-    async function editSeat(id){ const user = getCurrentUser(); if(!isAdmin(user)){ alert('Tylko administrator może edytować aukcje'); return; } const seat = seats.find(s=>s.id===id); if(!seat) return; const title = prompt('Nowa nazwa miejsca:', seat.title); if(title===null) return; const base = Number(prompt('Nowa cena wywoławcza (zł):', seat.basePrice)); if(Number.isFinite(base)) seat.basePrice = base; const durMin = Number(prompt('Czas trwania (minuty):', (seat.durationSec/60).toFixed(1))); if(Number.isFinite(durMin) && durMin>0){ seat.durationSec = Math.max(10, Math.round(durMin*60)); if(seat.status==='ongoing'){ seat.endTime = Date.now() + seat.durationSec*1000; } } seat.title = title.trim() || seat.title; saveLocal(); await pushSeatsToServer(); render(); }
+      const code = generateShortCode(fullname, total);
+      document.getElementById('shortCode').textContent = code;
+      document.getElementById('result').style.display = 'block';
+    });
 
-    async function changeDurationPrompt(id){ const user = getCurrentUser(); if(!isAdmin(user)){ alert('Tylko administrator może zmieniać czas aukcji'); return; } const seat = seats.find(s=>s.id===id); if(!seat) return; const durMin = prompt('Ustaw nowy czas trwania (minuty). Uwaga: jeśli aukcja jest już trwająca, jej timer zostanie ustawiony na nowy czas (restart).', (seat.durationSec/60).toFixed(1)); if(durMin===null) return; const parsed = Number(durMin); if(!Number.isFinite(parsed) || parsed <= 0){ alert('Niepoprawna wartość'); return; } seat.durationSec = Math.max(10, Math.round(parsed*60)); if(seat.status==='ongoing'){ seat.endTime = Date.now() + seat.durationSec*1000; } saveLocal(); await pushSeatsToServer(); render(); }
-
-    // --- PŁATNOŚCI (Stripe Checkout demo) ---
-    // Frontend: po kliknięciu Zapłać wysyłamy POST /create-checkout-session { seatId }
-    // Backend powinien utworzyć session w Stripe i zwrócić { url }
-
-    async function startPayment(seatId){
-      const seat = seats.find(s=>s.id===seatId);
-      if(!seat){ alert('Nie znaleziono miejsca'); return; }
-      if(!seat.highestBid || !seat.highestBidder){ alert('Brak zwycięzcy/kwoty'); return; }
-
+    // --- copy to clipboard ---
+    document.getElementById('copyBtn').addEventListener('click', async ()=>{
+      const text = document.getElementById('shortCode').textContent;
       try{
-        const res = await fetch('/create-checkout-session', {
-          method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ seatId })
-        });
+        await navigator.clipboard.writeText(text);
+        document.getElementById('copyOK').style.display = 'inline';
+        setTimeout(()=>document.getElementById('copyOK').style.display='none',2000);
+      }catch(e){ alert('Nie udało się skopiować. Skopiuj ręcznie.'); }
+    });
 
-        // jeśli serwer zwraca JSON -> oczekiwane
-        const ct = (res.headers.get('content-type')||'').toLowerCase();
-        if(res.ok && ct.includes('application/json')){
-          const data = await res.json();
-          if(data.url){ window.location = data.url; return; }
-          if(data.error) { alert('Błąd tworzenia sesji płatności: ' + data.error); return; }
-        }
+    // --- name save to localStorage ---
+    document.getElementById('saveNameBtn').addEventListener('click', ()=>{
+      const v = (document.getElementById('fullname').value || '').trim();
+      if(!v){ alert('Wpisz imię i nazwisko.'); return; }
+      localStorage.setItem('licytacja_fullname', v);
+      document.getElementById('nameSaved').textContent = 'Zapisano lokalnie.';
+      setTimeout(()=>document.getElementById('nameSaved').textContent='',1500);
+    });
 
-        // jeśli tu jesteśmy, serwer nie zwrócił JSON (np. GitHub Pages zwrócił HTML) lub nie działa
-        // pokaż użytkownikowi przyjazny komunikat i zaproponuj tryb demo
-        const tryDemo = confirm('Backend płatności nie odpowiada poprawnym JSON-em (brak serwera lub błąd).
-Czy chcesz zasymulować płatność lokalnie (DEMO)?');
-        if(tryDemo){
-          // prosta symulacja sukcesu płatności — w prawdziwej aplikacji obsłuż webhook na backendzie
-          alert('Symulacja: płatność zakończona powodzeniem.');
-          // oznacz aukcję jako opłacona / zresetuj (tutaj po prostu reset)
-          seats = seats.map(s => s.id===seatId ? ({...s, status:'ready', highestBid:0, highestBidder:null, endTime:null}) : s);
-          saveLocal(); await pushSeatsToServer(); render();
-        }
-      }catch(e){
-        // fetch rzucił wyjątek (np. brak sieci)
-        const tryDemo = confirm('Błąd sieci podczas wywoływania płatności: "' + e.message + '"
-Czy chcesz zasymulować płatność lokalnie (DEMO)?');
-        if(tryDemo){ alert('Symulacja: płatność zakończona powodzeniem.'); seats = seats.map(s => s.id===seatId ? ({...s, status:'ready', highestBid:0, highestBidder:null, endTime:null}) : s); saveLocal(); await pushSeatsToServer(); render(); }
-      }
+    // --- admin panel toggles and quick edit ---
+    document.getElementById('toggleAdmin').addEventListener('click', ()=>{
+      const p = document.getElementById('adminPanel'); p.style.display = p.style.display==='none'?'block':'none';
+      if(p.style.display==='block') renderAdminInputs();
+    });
+
+    function renderAdminInputs(){
+      const root = document.getElementById('adminSeats'); root.innerHTML = '';
+      CONFIG.seats.forEach((s,idx)=>{
+        const div = document.createElement('div'); div.style.marginTop='8px';
+        div.innerHTML = `
+          <label>${s.label}</label>
+          <div class="row">
+            <input data-seatidx="${idx}" class="admin-leader" value="${s.leader}" />
+            <input type="number" data-seatidx="${idx}" class="admin-bid" value="${s.currentBid}" />
+          </div>`;
+        root.appendChild(div);
+      });
     }
 
-    // synchronization: try server every 3s
-    setInterval(()=>{ fetchSeatsFromServer(); }, 3000);
+    document.getElementById('saveAdmin').addEventListener('click', ()=>{
+      // update CONFIG object in memory and re-render UI
+      document.querySelectorAll('.admin-bid').forEach(inp=>{
+        const idx = Number(inp.dataset.seatidx); CONFIG.seats[idx].currentBid = Number(inp.value)||0;
+      });
+      document.querySelectorAll('.admin-leader').forEach(inp=>{
+        const idx = Number(inp.dataset.seatidx); CONFIG.seats[idx].leader = inp.value || '—';
+      });
+      // save to localStorage so values persist for this browser
+      localStorage.setItem('licytacja_config', JSON.stringify(CONFIG));
+      populateSelects(CONFIG.seats);
+      renderSeatsTable(CONFIG.seats);
+      alert('Zapisano lokalnie (w localStorage). Aby trwale zmienić, edytuj sekcję CONFIG w kodzie.');
+    });
 
-    // synchronizacja między kartami (localStorage)
-    window.addEventListener('storage', (ev)=>{ if(ev.key === STORAGE_KEY){ try{ const remote = JSON.parse(ev.newValue || '[]'); seats = remote; render(); }catch(e){} } });
+    document.getElementById('resetConfig').addEventListener('click', ()=>{
+      localStorage.removeItem('licytacja_config');
+      loadInitialConfig();
+      alert('Przywrócono wartości z CONFIG.');
+    });
 
-    // cykliczne sprawdzanie czasu (1s)
-    setInterval(()=>{ const now = Date.now(); let changed = false; seats = seats.map(s => { if(s.status==='ongoing' && s.endTime && now>=s.endTime){ changed = true; return {...s, status:'ended'}; } return s; }); if(changed){ saveLocal(); pushSeatsToServer(); } render(); }, 1000);
+    // --- handle pickup select -> show/hide custom km ---
+    pickupSelect.addEventListener('change', ()=>{
+      if(pickupSelect.value==='custom') customKmRow.style.display='block'; else customKmRow.style.display='none';
+    });
 
-    // --- add form handling ---
-    document.getElementById('addForm').addEventListener('submit', async ev=>{ ev.preventDefault(); const user = getCurrentUser(); if(!isAdmin(user)){ document.getElementById('addErr').textContent = 'Tylko administrator może dodawać nowe licytacje.'; return; } const nameEl = document.getElementById('seatName'); const baseEl = document.getElementById('basePrice'); const durEl = document.getElementById('duration'); const name = nameEl.value.trim(); const base = Number(baseEl.value) || 0; const durMin = Number(durEl.value) || 1; if(base < 0){ document.getElementById('addErr').textContent = 'Cena wywoławcza musi być >= 0'; return; } if(durMin < 0.1){ document.getElementById('addErr').textContent = 'Czas trwania musi być co najmniej 0.1 minuty'; return; } const seat = { id: Date.now(), title: name || `Miejsce ${seats.length+1}`, basePrice: base, durationSec: Math.max(10, Math.round(durMin*60)), status: 'ready', highestBid:0, highestBidder:null, endTime:null }; seats.unshift(seat); saveLocal(); await pushSeatsToServer(); nameEl.value=''; baseEl.value='10'; durEl.value='2'; nameEl.focus(); render(); });
+    // --- load config from localStorage if istnieje ---
+    function loadInitialConfig(){
+      const saved = localStorage.getItem('licytacja_config');
+      if(saved){
+        try{ const parsed = JSON.parse(saved); Object.assign(CONFIG, parsed); }
+        catch(e){ console.warn('błąd odczytu config z localstorage', e); }
+      }
+      renderSeatsTable(CONFIG.seats);
+      populateSelects(CONFIG.seats);
+      updateCountdown();
+      // preload saved name
+      const savedName = localStorage.getItem('licytacja_fullname'); if(savedName) document.getElementById('fullname').value = savedName;
+    }
 
-    // --- login modal handling (only set overlay display in init / submit / guest) ---
-    const loginOverlay = document.getElementById('loginOverlay');
-    const loginForm = document.getElementById('loginForm');
-    const guestBtn = document.getElementById('guestBtn');
+    // initialize
+    loadInitialConfig();
 
-    loginForm.addEventListener('submit', ev=>{ ev.preventDefault(); const firstInput = document.getElementById('firstName'); const lastInput = document.getElementById('lastName'); const first = firstInput.value.trim(); const last = lastInput.value.trim(); if(!first || !last){ alert('Podaj imię i nazwisko'); return; } const user = { first, last }; setCurrentUser(user); loginOverlay.style.display = 'none'; render(); });
-    guestBtn.addEventListener('click', ()=>{ setCurrentUser({ first: 'Gość', last: '' }); loginOverlay.style.display = 'none'; render(); });
-
-    // init once
-    (async function init(){ const local = await loadSeatsLocal(); seats = local; await fetchSeatsFromServer(); const user = getCurrentUser(); if(user){ loginOverlay.style.display = 'none'; } else { loginOverlay.style.display = 'flex'; }
-      // do not touch input values here; user can type without interruptions
-      render(); })();
-
-    // initial render (fallback)
-    render();
   </script>
-
-  <!--
-    BACKEND: przykładowy server.js (Node.js + Express) — obsługa /seats i Stripe Checkout
-    -----------------------------------------------------------------
-    Ten backend umożliwia synchronizację między komputerami (GET/POST /seats)
-    oraz tworzenie sesji płatności Stripe (POST /create-checkout-session).
-
-    Instalacja:
-      npm init -y
-      npm i express stripe body-parser dotenv
-
-    .env:
-      STRIPE_SECRET_KEY=sk_test_...
-      DOMAIN=http://localhost:4242
-
-    server.js (przykład):
-
-    const express = require('express');
-    const bodyParser = require('body-parser');
-    const Stripe = require('stripe');
-    require('dotenv').config();
-
-    const stripe = Stripe(process.env.STRIPE_SECRET_KEY);
-    const app = express();
-    app.use(bodyParser.json());
-
-    // prosty storage w pamieci — uzyj DB w produkcji
-    let seats = [];
-
-    app.get('/seats', (req,res)=>{
-      res.json(seats);
-    });
-
-    app.post('/seats', (req,res)=>{
-      seats = req.body;
-      res.json({ok:true});
-    });
-
-    app.post('/create-checkout-session', async (req,res)=>{
-      try{
-        const { seatId } = req.body;
-        const seat = seats.find(s=>s.id === seatId);
-        if(!seat) return res.status(400).json({ error: 'Seat not found' });
-        if(!seat.highestBid) return res.status(400).json({ error: 'No winning bid' });
-
-        const domain = process.env.DOMAIN || 'http://localhost:4242';
-        const session = await stripe.checkout.sessions.create({
-          payment_method_types: ['card','blik'], // depends on your Stripe account
-          mode: 'payment',
-          line_items: [{
-            price_data: { currency: 'pln', product_data: { name: seat.title }, unit_amount: Math.round(seat.highestBid * 100) },
-            quantity: 1,
-          }],
-          success_url: `${domain}/success.html?session_id={CHECKOUT_SESSION_ID}`,
-          cancel_url: `${domain}/cancel.html`,
-          metadata: { seatId: String(seatId) }
-        });
-
-        res.json({ url: session.url });
-      }catch(err){ console.error(err); res.status(500).json({ error: err.message }); }
-    });
-
-    app.post('/webhook', bodyParser.raw({type: 'application/json'}), (req,res)=>{
-      // implementuj verification i aktualizacje seats
-      res.json({received:true});
-    });
-
-    app.listen(4242, ()=>console.log('Server running on http://localhost:4242'));
-  -->
-
 </body>
 </html>
