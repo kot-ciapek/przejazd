@@ -161,8 +161,10 @@
     const adminCard = document.getElementById('adminCard');
     const toastEl = document.getElementById('toast');
     const minStepView = document.getElementById('minStepView');
+    if (minStepView) {
+      minStepView.textContent = MIN_BID_STEP;
+    }
 
-    minStepView.textContent = MIN_BID_STEP;
 
     function renderSeatsTable(seats){
       seatsTable.innerHTML = '';
@@ -311,10 +313,10 @@
     // admin widoczny tylko dla "tylko przejazd"
     document.getElementById('saveNameBtn').addEventListener('click', ()=>{
       const v = (document.getElementById('fullname').value || '').trim();
-      if(!v){ alert('Wpisz imię i nazwisko.'); return; }
+      if(!v){ alert('Wpisz swoje imię i nazwisko.'); return; }
       localStorage.setItem('licytacja_fullname', v);
-      document.getElementById('nameSaved').textContent = 'Zapisano lokalnie.';
-      setTimeout(()=>document.getElementById('nameSaved').textContent='',1500);
+      document.getElementById('nameSaved').textContent = 'zapisano!';
+      setTimeout(()=>document.getElementById('nameSaved').textContent='',3000);
       if(v.toLowerCase()==="tylko przejazd"){ adminCard.style.display='block'; }
     });
 
