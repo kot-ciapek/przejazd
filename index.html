@@ -26,11 +26,15 @@
     .center{text-align:center}
     footer{margin-top:18px;font-size:13px;color:#444}
     .note{font-size:13px;color:#333}
+
+    /* toast */
+    .toast{position:fixed;right:20px;bottom:20px;background:#111;color:white;padding:10px 14px;border-radius:8px;box-shadow:0 6px 18px rgba(0,0,0,0.2);opacity:0;transform:translateY(10px);transition:opacity .25s,transform .25s;z-index:9999}
+    .toast.show{opacity:1;transform:translateY(0)}
   </style>
 </head>
 <body>
-  <h1>Licytacja miejsc – Częstochowa → RadostkówKolonia</h1>
--
+  <h1>Licytacja miejsc – Częstochowa → Radostków-Kolonia</h1>
+
   <div class="card">
     <h2>Status licytacji</h2>
     <div class="row">
@@ -57,8 +61,8 @@
     <label>Wybierz miejsce</label>
     <select id="seatSelect"></select>
 
-    <!-- NOWE: pole do wpisania oferty -->
-    <label>Twoja oferta (zł)</label>
+    <!-- pole do wpisania oferty -->
+    <label>Twoja oferta (zł) — minimalny krok: <span id="minStepView">1</span> zł</label>
     <input type="number" id="userBid" min="1" />
 
     <label>Miejsce odbioru</label>
@@ -104,8 +108,15 @@
     <div class="muted">Licytacja trwa do 29 sierpnia 2025, 15:00.</div>
   </footer>
 
+  <div id="toast" class="toast" role="status" aria-live="polite"></div>
+
   <script>
-    const CONFIG = {
+    // Local config + server sync
+    const STORAGE_KEY = 'licytacja_config_v1';
+    const SERVER_POLL_MS = 3000; // poll server every 3s
+    const MIN_BID_STEP = 1; // minimalny krok oferty
+
+    const DEFAULT_CONFIG = {
       seats: [
         { id: 'seat1', label: 'Miejsce 1', currentBid: 30, leader: 'Anna Nowak' },
         { id: 'seat2', label: 'Miejsce 2', currentBid: 28, leader: 'Piotr K.' },
@@ -123,6 +134,20 @@
       ]
     };
 
+    // load/save config from localStorage so bids persist
+    function loadConfig(){
+      try{
+        const raw = localStorage.getItem(STORAGE_KEY);
+        if(!raw) return JSON.parse(JSON.stringify(DEFAULT_CONFIG));
+        const parsed = JSON.parse(raw);
+        if(!parsed.seats) parsed.seats = JSON.parse(JSON.stringify(DEFAULT_CONFIG.seats));
+        return parsed;
+      }catch(e){ return JSON.parse(JSON.stringify(DEFAULT_CONFIG)); }
+    }
+    function saveConfig(cfg){ localStorage.setItem(STORAGE_KEY, JSON.stringify(cfg)); }
+
+    let CONFIG = loadConfig();
+
     const seatsTable = document.getElementById('seatsTable');
     const seatSelect = document.getElementById('seatSelect');
     const pickupSelect = document.getElementById('pickupSelect');
@@ -134,12 +159,16 @@
     const endDateText = document.getElementById('endDateText');
     const generateBtn = document.getElementById('generateBtn');
     const adminCard = document.getElementById('adminCard');
+    const toastEl = document.getElementById('toast');
+    const minStepView = document.getElementById('minStepView');
+
+    minStepView.textContent = MIN_BID_STEP;
 
     function renderSeatsTable(seats){
       seatsTable.innerHTML = '';
       seats.forEach(s=>{
         const tr = document.createElement('tr');
-        tr.innerHTML = `<td>${s.label}</td><td>${s.currentBid} zł</td><td>${s.leader}</td>`;
+        tr.innerHTML = '<td>' + escapeHtml(s.label) + '</td><td>' + s.currentBid + ' zł</td><td>' + escapeHtml(s.leader) + '</td>';
         seatsTable.appendChild(tr);
       });
     }
@@ -148,7 +177,7 @@
       seatSelect.innerHTML = '';
       seats.forEach(s=>{
         const opt = document.createElement('option');
-        opt.value = s.id; opt.textContent = `${s.label} — ${s.currentBid} zł`;
+        opt.value = s.id; opt.textContent = s.label + ' — ' + s.currentBid + ' zł';
         seatSelect.appendChild(opt);
       });
       pickupSelect.innerHTML = '';
@@ -159,6 +188,8 @@
       extraPerKmView.textContent = CONFIG.extraPerKm;
       phoneView.textContent = CONFIG.phoneNumber;
       endDateText.textContent = new Date(CONFIG.auctionEndISO).toLocaleString('pl-PL', {timeZone:'Europe/Warsaw'});
+
+      updateUserBidConstraints();
     }
 
     const auctionEndDate = new Date(CONFIG.auctionEndISO);
@@ -174,7 +205,7 @@
       const h = Math.floor(diff/1000/60/60)%24;
       const m = Math.floor(diff/1000/60)%60;
       const s = Math.floor(diff/1000)%60;
-      countdownEl.textContent = `${d}d ${h}h ${m}m ${s}s`;
+      countdownEl.textContent = d + 'd ' + h + 'h ' + m + 'm ' + s + 's';
     }
     setInterval(updateCountdown,1000);
 
@@ -183,24 +214,94 @@
       if(parts.length===0) return '';
       const first = parts[0];
       const lastInitial = parts.length>1 ? parts[parts.length-1].charAt(0).toUpperCase() : '';
-      return `${first}${lastInitial},${amount}zł`;
+      return first + lastInitial + ',' + amount + 'zł';
     }
 
-    generateBtn.addEventListener('click', ()=>{
+    function updateUserBidConstraints(){
+      const seatId = seatSelect.value;
+      const seat = CONFIG.seats.find(s=>s.id===seatId);
+      const bidInput = document.getElementById('userBid');
+      if(seat){
+        const min = Math.max(1, seat.currentBid + MIN_BID_STEP);
+        bidInput.min = String(min);
+        if(!bidInput.value || Number(bidInput.value) < min) bidInput.value = String(min);
+      } else {
+        bidInput.min = '1';
+        if(!bidInput.value) bidInput.value = '1';
+      }
+    }
+
+    // --- server sync helpers ---
+    async function fetchSeatsFromServer(){
+      try{
+        const res = await fetch('/seats');
+        if(!res.ok) throw new Error('no server');
+        const ct = (res.headers.get('content-type')||'').toLowerCase();
+        if(!ct.includes('application/json')) throw new Error('not json');
+        const remote = await res.json();
+        if(Array.isArray(remote)){
+          CONFIG.seats = remote;
+          saveConfig(CONFIG);
+          renderSeatsTable(CONFIG.seats);
+          populateSelects(CONFIG.seats);
+          return true;
+        }
+        return false;
+      }catch(e){
+        // server not available -> ignore
+        return false;
+      }
+    }
+
+    async function pushSeatsToServer(){
+      try{
+        const res = await fetch('/seats', { method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify(CONFIG.seats) });
+        return res.ok;
+      }catch(e){ return false; }
+    }
+
+    // simple toast
+    let toastTimer = null;
+    function showToast(msg, ms=2500){
+      clearTimeout(toastTimer);
+      toastEl.textContent = msg; toastEl.classList.add('show');
+      toastTimer = setTimeout(()=>{ toastEl.classList.remove('show'); }, ms);
+    }
+
+    generateBtn.addEventListener('click', async ()=>{
       if(new Date() > auctionEndDate){ alert("Licytacja zakończona."); return; }
       const fullname = (document.getElementById('fullname').value || '').trim();
       if(!fullname){ alert('Wpisz imię i nazwisko.'); return; }
       const seatId = seatSelect.value;
       const seat = CONFIG.seats.find(s=>s.id===seatId);
       if(!seat){ alert('Nie znaleziono miejsca.'); return; }
-      const userBid = Number(document.getElementById('userBid').value);
-      if(!userBid || userBid <= seat.currentBid){
-        alert(`Twoja oferta musi być większa niż ${seat.currentBid} zł`); return;
+      const userBidEl = document.getElementById('userBid');
+      const userBid = Number(userBidEl.value);
+      const minRequired = seat.currentBid + MIN_BID_STEP;
+      if(!userBid || userBid < minRequired){
+        alert('Twoja oferta musi być co najmniej ' + minRequired + ' zł (aktualna ' + seat.currentBid + ' zł + krok ' + MIN_BID_STEP + ' zł)');
+        return;
       }
       const pickup = pickupSelect.value;
       let extraKm = 0;
       if(pickup==='custom'){ extraKm = parseInt(customKmInput.value)||0; }
       const total = userBid + (extraKm * CONFIG.extraPerKm);
+
+      // update seat locally
+      seat.currentBid = userBid;
+      seat.leader = fullname;
+      saveConfig(CONFIG);
+      renderSeatsTable(CONFIG.seats);
+      populateSelects(CONFIG.seats);
+
+      // push to server (best-effort)
+      const pushed = await pushSeatsToServer();
+      if(pushed){
+        showToast('Oferta przyjęta i zsynchronizowana z serwerem.');
+      } else {
+        showToast('Oferta przyjęta lokalnie (serwer niedostępny).');
+      }
+
       document.getElementById('totalAmount').textContent = total;
       const code = generateShortCode(fullname, total);
       document.getElementById('shortCode').textContent = code;
@@ -221,17 +322,65 @@
       if(pickupSelect.value==='custom') customKmRow.style.display='block'; else customKmRow.style.display='none';
     });
 
-    function loadInitialConfig(){
+    // admin controls (same as before)
+    document.getElementById('toggleAdmin').addEventListener('click', ()=>{
+      const ap = document.getElementById('adminPanel'); ap.style.display = ap.style.display==='none' ? 'block' : 'none'; renderAdmin();
+    });
+
+    function renderAdmin(){
+      const root = document.getElementById('adminSeats'); root.innerHTML='';
+      CONFIG.seats.forEach((s,idx)=>{
+        const div = document.createElement('div'); div.style.marginTop='6px';
+        div.innerHTML = '<div class=\"row\"><input data-idx=\"' + idx + '\" class=\"admin-label\" value=\"' + escapeHtml(s.label) + '\" /><input data-idx=\"' + idx + '\" class=\"admin-bid\" type=\"number\" value=\"' + s.currentBid + '\" style=\"width:120px\" /><input data-idx=\"' + idx + '\" class=\"admin-leader\" value=\"' + escapeHtml(s.leader) + '\" /><button class=\"btn-ghost\" data-idx=\"' + idx + '\">Usuń</button></div>';
+        root.appendChild(div);
+      });
+      root.querySelectorAll('.btn-ghost').forEach(b=>b.addEventListener('click', (ev)=>{
+        const idx = Number(ev.currentTarget.dataset.idx); CONFIG.seats.splice(idx,1); saveConfig(CONFIG); renderAdmin(); renderSeatsTable(CONFIG.seats); populateSelects(CONFIG.seats);
+      }));
+    }
+
+    document.getElementById('saveAdmin').addEventListener('click', ()=>{
+      const labels = Array.from(document.querySelectorAll('.admin-label')).map(i=>i.value.trim());
+      const bids = Array.from(document.querySelectorAll('.admin-bid')).map(i=>Number(i.value)||0);
+      const leaders = Array.from(document.querySelectorAll('.admin-leader')).map(i=>i.value.trim());
+      CONFIG.seats.forEach((s,idx)=>{ s.label = labels[idx] || s.label; s.currentBid = bids[idx]||s.currentBid; s.leader = leaders[idx]||s.leader; });
+      saveConfig(CONFIG); renderSeatsTable(CONFIG.seats); populateSelects(CONFIG.seats); renderAdmin();
+      pushSeatsToServer();
+    });
+
+    document.getElementById('resetConfig').addEventListener('click', ()=>{
+      if(!confirm('Czy na pewno zresetować konfigurację?')) return;
+      CONFIG = JSON.parse(JSON.stringify(DEFAULT_CONFIG)); saveConfig(CONFIG); renderSeatsTable(CONFIG.seats); populateSelects(CONFIG.seats); renderAdmin();
+      pushSeatsToServer();
+    });
+
+    // copy button
+    document.getElementById('copyBtn').addEventListener('click', ()=>{
+      const text = document.getElementById('shortCode').textContent.trim();
+      navigator.clipboard.writeText(text).then(()=>{ document.getElementById('copyOK').style.display='inline'; setTimeout(()=>document.getElementById('copyOK').style.display='none',1500); });
+    });
+
+    // helpers
+    function escapeHtml(str){ return String(str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/\"/g,'&quot;').replace(/'/g,'&#39;'); }
+
+    // init: load config, try fetch from server, start polling
+    (async function init(){
       renderSeatsTable(CONFIG.seats);
       populateSelects(CONFIG.seats);
       updateCountdown();
       const savedName = localStorage.getItem('licytacja_fullname');
-      if(savedName){ 
-        document.getElementById('fullname').value = savedName; 
-        if(savedName.toLowerCase()==="tylko przejazd"){ adminCard.style.display='block'; }
-      }
-    }
-    loadInitialConfig();
+      if(savedName){ document.getElementById('fullname').value = savedName; if(savedName.toLowerCase()==="tylko przejazd"){ adminCard.style.display='block'; }}
+
+      // initial fetch from server if available
+      await fetchSeatsFromServer();
+
+      // start polling server so other computers see updates
+      setInterval(fetchSeatsFromServer, SERVER_POLL_MS);
+    })();
+
+    // persist config locally
+    function saveConfig(cfg){ localStorage.setItem(STORAGE_KEY, JSON.stringify(cfg)); }
+
   </script>
 </body>
 </html>
