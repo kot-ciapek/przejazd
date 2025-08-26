@@ -44,7 +44,7 @@
       <div class="muted">Koniec: <span id="endDateText"></span></div>
     </div>
     <table>
-      <thead><tr><th>Miejsce</th><th>Aktualna kwota</th><th>Prowadzący</th></tr></thead>
+      <thead><tr><th>Miejsce</th><th>Aktualna kwota</th><th>Obecny lider</th></tr></thead>
       <tbody id="seatsTable"></tbody>
     </table>
   </div>
@@ -210,7 +210,7 @@
       const h = Math.floor(diff/1000/60/60)%24;
       const m = Math.floor(diff/1000/60)%60;
       const s = Math.floor(diff/1000)%60;
-      countdownEl.textContent = d + 'd ' + h + 'h ' + m + 'm ' + s + 's';
+      countdownEl.textContent = d + ' dni ' + h + ' godzin ' + m + ' minut ' + s + 'sekund';
     }
     setInterval(updateCountdown,1000);
 
@@ -219,7 +219,7 @@
       if(parts.length===0) return '';
       const first = parts[0];
       const lastInitial = parts.length>1 ? parts[parts.length-1].charAt(0).toUpperCase() : '';
-      return first + lastInitial + ',' + amount + 'zł';
+      return first + lastInitial + amount;
     }
 
     function updateUserBidConstraints(){
