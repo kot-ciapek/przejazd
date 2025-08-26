@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Licytacja miejsc na trasę: Częstochowa → Radostków</title>
+  <title>Licytacja miejsc</title>
   <style>
     :root{font-family:Inter,system-ui,Arial,Helvetica,sans-serif;color:#111}
     body{max-width:920px;margin:28px auto;padding:18px}
@@ -33,7 +33,7 @@
   </style>
 </head>
 <body>
-  <h1>Licytacja miejsc na trasę: Częstochowa → Radostków</h1>
+  <h1>Licytacja miejsc na trasę Częstochowa → Radostków</h1>
 
   <div class="card">
     <h2>Status licytacji</h2>
@@ -50,10 +50,10 @@
   </div>
 
   <div class="card">
-    <h2>Wejdź do licytacji generując unikalny kod</h2>
+    <h2>Wejdź i wygeneruj kod licytacji</h2>
     <label>Twoje imię i nazwisko</label>
     <div class="row">
-      <input id="fullname" placeholder="np. Adam Starak" />
+      <input id="fullname" placeholder="np. Jan Kowalski" />
       <button class="btn" id="saveNameBtn">Zapisz</button>
       <div id="nameSaved" class="muted"></div>
     </div>
@@ -62,8 +62,8 @@
     <select id="seatSelect"></select>
 
     <!-- pole do wpisania oferty -->
-    <label>Twoja oferta w polskich złotókach (musi być większa od obecnej o co najmniej 10 gr</label>
-    <input type="number" id="userBid" min="1+2" />
+    <label>Twoja oferta (zł) — minimalny krok: <span id="minStepView">1</span> zł</label>
+    <input type="number" id="userBid" min="1" />
 
     <label>Miejsce odbioru</label>
     <select id="pickupSelect"></select>
