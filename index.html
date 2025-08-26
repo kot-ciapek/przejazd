@@ -75,7 +75,7 @@
     <div style="margin-top:10px" class="row">
       <button class="btn" id="generateBtn">Licytuj (generuj kod)</button>
       <div class="spacer"></div>
-      <div class="muted">Dopłata/km: <span id="extraPerKmView"></span> zł</div>
+      <div class="muted">Dopłata przy wybraniu opcji własnego miejsca (za kilometr): <span id="extraPerKmView"></span> zł</div>
     </div>
 
     <div id="result" class="card" style="display:none;margin-top:12px">
@@ -293,11 +293,11 @@
       const total = userBid + (extraKm * CONFIG.extraPerKm);
 
       // update seat locally
-      seat.currentBid = userBid;
-      seat.leader = fullname;
-      saveConfig(CONFIG);
-      renderSeatsTable(CONFIG.seats);
-      populateSelects(CONFIG.seats);
+      // seat.currentBid = userBid;
+      // seat.leader = fullname;
+      // saveConfig(CONFIG);
+      // renderSeatsTable(CONFIG.seats);
+      // populateSelects(CONFIG.seats);
 
       // push to server (best-effort)
       const pushed = await pushSeatsToServer();
