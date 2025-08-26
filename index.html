@@ -1,109 +1,320 @@
-<!DOCTYPE html><html lang="pl">
+<!doctype html>
+<html lang="pl">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Licytacja przejazdu</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Licytacja miejsc — Częstochowa → Radostków-Kolonia</title>
   <style>
-    body { font-family: Arial, sans-serif; margin: 20px; background: #f9f9f9; }
-    h1 { text-align: center; }
-    .card { background: #fff; padding: 20px; margin: 20px auto; max-width: 500px; border-radius: 10px; box-shadow: 0 2px 6px rgba(0,0,0,0.1); }
-    label { display: block; margin-top: 10px; }
-    input, select, button { width: 100%; padding: 8px; margin-top: 5px; }
-    .result { margin-top: 15px; padding: 10px; background: #eef; border-radius: 5px; }
-    .admin { margin-top: 30px; background: #ffe; }
-    .hidden { display: none; }
-    .countdown { text-align: center; font-size: 18px; margin: 20px; }
+    :root{font-family:Inter,system-ui,Arial,Helvetica,sans-serif;color:#111}
+    body{max-width:920px;margin:28px auto;padding:18px}
+    h1,h2{margin:8px 0}
+    .card{border:1px solid #e6e6e6;border-radius:10px;padding:14px;margin:12px 0;box-shadow:0 2px 6px rgba(0,0,0,0.03)}
+    label{display:block;margin:8px 0 4px;font-weight:600}
+    input,select,button{padding:8px 10px;border-radius:8px;border:1px solid #ccc;font-size:15px}
+    .row{display:flex;gap:10px;align-items:center}
+    .spacer{flex:1}
+    table{width:100%;border-collapse:collapse;margin-top:8px}
+    th,td{padding:8px;border-bottom:1px solid #eee;text-align:left}
+    .muted{color:#666;font-size:13px}
+    .big{font-size:20px;font-weight:700}
+    .countdown{font-weight:700;color:#b22222}
+    .copyok{color:green;margin-left:8px}
+    .admin-toggle{background:#f3f3f3;border:0}
+    .admin-panel{margin-top:10px}
+    .btn{background:#0070f3;color:white;border:0;padding:10px 12px;border-radius:8px;cursor:pointer}
+    .btn-ghost{background:transparent;border:1px solid #0070f3;color:#0070f3}
+    .center{text-align:center}
+    footer{margin-top:18px;font-size:13px;color:#444}
+    .note{font-size:13px;color:#333}
   </style>
 </head>
 <body>
-  <h1>Licytacja miejsc w aucie</h1>
-  <div class="countdown" id="countdown"></div>  <div class="card">
-    <h2>Zaloguj się</h2>
-    <label>Imię i nazwisko: <input type="text" id="username"></label>
-    <button onclick="login()">Zaloguj</button>
-  </div>  <div class="card hidden" id="auctionPanel">
-    <h2>Weź udział w licytacji</h2>
-    <p><strong>Aktualna kwota:</strong> <span id="currentBid">50</span> zł (prowadzi: <span id="currentLeader">Jan Kowalski</span>)</p>
-    <label>Miejsce odbioru:
-      <select id="pickup">
-        <option value="centrum">Częstochowa - centrum</option>
-        <option value="północ">Częstochowa - północ</option>
-        <option value="dworzec">Częstochowa - Dworzec PKS</option>
-        <option value="inne">Inne (dopłata 1 zł/km)</option>
-      </select>
-    </label>
-    <label id="extraKmLabel" class="hidden">Podaj liczbę kilometrów: <input type="number" id="extraKm" min="0"></label><label>Twoja oferta (zł): <input type="number" id="userBid" min="0"></label>
+  <h1>Licytacja miejsc – Częstochowa → Radostków‑Kolonia</h1>
+  <p class="muted">Strona statyczna (prototyp). Dla hostingu użyj GitHub Pages – wrzuć ten plik jako <code>index.html</code> do repo i włącz Pages.</p>
 
-<button id="bidBtn" onclick="placeBid()">Licytuj</button>
-<div class="result hidden" id="result"></div>
+  <div class="card">
+    <h2>Status licytacji</h2>
+    <div class="row">
+      <div>Do zakończenia:</div>
+      <div class="countdown" id="countdown">ładowanie...</div>
+      <div class="spacer"></div>
+      <div class="muted">Koniec: <span id="endDateText"></span></div>
+    </div>
 
-  </div>  <div class="card admin hidden" id="adminPanel">
-    <h2>Panel admina</h2>
-    <label>Aktualna kwota: <input type="number" id="adminBid" value="50"></label>
-    <label>Aktualny lider: <input type="text" id="adminLeader" value="Jan Kowalski"></label>
-    <button onclick="updateAuction()">Zapisz</button>
-  </div><script>
-  let currentBid = 50;
-  let currentLeader = "Jan Kowalski";
-  const endTime = new Date("2025-08-29T15:00:00").getTime();
+    <table>
+      <thead><tr><th>Miejsce</th><th>Aktualna kwota</th><th>Prowadzący</th></tr></thead>
+      <tbody id="seatsTable"></tbody>
+    </table>
+    <p class="muted">Uwaga: aktualne kwoty i prowadzący znajdują się w sekcji <strong>CONFIG</strong> na górze skryptu — edytuj je tam lub użyj panelu "Edytuj".</p>
+  </div>
 
-  function login(){
-    const user = document.getElementById('username').value.trim();
-    if(!user) return alert("Podaj imię i nazwisko!");
-    document.getElementById('auctionPanel').classList.remove('hidden');
-    if(user.toLowerCase()==="tylko przejazd"){
-      document.getElementById('adminPanel').classList.remove('hidden');
+  <div class="card">
+    <h2>Wejdź i wygeneruj kod licytacji</h2>
+    <div class="note">Zaloguj się, wpisując swoje imię i nazwisko (to nie jest prawdziwy system auth, tylko lokalne zapamiętanie).</div>
+
+    <label>Twoje imię i nazwisko</label>
+    <div class="row">
+      <input id="fullname" placeholder="np. Jan Kowalski" />
+      <button class="btn" id="saveNameBtn">Zapisz</button>
+      <div id="nameSaved" class="muted"></div>
+    </div>
+
+    <label>Wybierz miejsce (na które chcesz wygenerować kod)</label>
+    <select id="seatSelect"></select>
+
+    <label>Miejsce odbioru</label>
+    <select id="pickupSelect"></select>
+
+    <div id="customKmRow" style="display:none; margin-top:8px">
+      <label>Ile km od wybranego miejsca (liczba całkowita)</label>
+      <input type="number" id="customKm" min="0" value="0" />
+    </div>
+
+    <div style="margin-top:10px" class="row">
+      <button class="btn" id="generateBtn">Licytuj (generuj kod)</button>
+      <div class="spacer"></div>
+      <div class="muted">Dopłata/km: <span id="extraPerKmView"></span> zł</div>
+    </div>
+
+    <div id="result" class="card" style="display:none;margin-top:12px">
+      <div class="big">Łączna kwota: <span id="totalAmount"></span> zł</div>
+      <div style="margin-top:6px">Kod do wysłania SMS: <strong id="shortCode"></strong>
+        <button class="btn-ghost" id="copyBtn">Kopiuj</button><span id="copyOK" class="copyok" style="display:none">Skopiowano!</span>
+      </div>
+      <p style="margin-top:8px">Wyślij powyższy kod SMS-em na numer: <strong id="phoneView"></strong> aby zatwierdzić podbicie licytacji.</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="row">
+      <h3 style="margin:0">Panel admina (szybka edycja zmiennych)</h3>
+      <div class="spacer"></div>
+      <button class="admin-toggle" id="toggleAdmin">Pokaż/Ukryj</button>
+    </div>
+
+    <div id="adminPanel" class="admin-panel" style="display:none">
+      <div class="muted">Edytuj kwoty i nazwy prowadzących. To tylko lokalna edycja (w pamięci przeglądarki). Aby trwale zmienić, edytuj sekcję <code>CONFIG</code> w skrypcie nad stroną.</div>
+      <div id="adminSeats"></div>
+      <div style="margin-top:8px" class="row">
+        <button class="btn" id="saveAdmin">Zapisz zmiany (tylko lokalnie)</button>
+        <button class="btn-ghost" id="resetConfig">Resetuj do wartości z CONFIG</button>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    <div class="muted">Licytacja trwa do 29 sierpnia 2025, 15:00 (Europe/Warsaw).</div>
+    <div class="muted">Gotowe do wrzucenia na GitHub Pages jako <code>index.html</code>.</div>
+  </footer>
+
+  <script>
+    /*************************************************************************
+     * KONFIGURACJA (edytuj TYLKO tutaj, na samej górze skryptu)            *
+     * - Aktualne kwoty i prowadzący dla każdego miejsca                  *
+     * - Data zakończenia licytacji                                       *
+     * - Numer telefonu do wysyłania SMS                                  *
+     * - Opcje miejsc odbioru i stawka za każdy dodatkowy km               *
+     *************************************************************************/
+
+    const CONFIG = {
+      // CZTERY wolne miejsca (oprócz kierowcy) — edytuj wartości tutaj
+      seats: [
+        { id: 'seat1', label: 'Miejsce 1', currentBid: 30, leader: 'Anna Nowak' },
+        { id: 'seat2', label: 'Miejsce 2', currentBid: 28, leader: 'Piotr K.' },
+        { id: 'seat3', label: 'Miejsce 3', currentBid: 25, leader: '—' },
+        { id: 'seat4', label: 'Miejsce 4', currentBid: 20, leader: '—' }
+      ],
+
+      // Koniec licytacji: ustaw dokładnie (rok-miesiąc-dzieńTczass+offset)
+      auctionEndISO: '2025-08-29T15:00:00+02:00',
+
+      // Numer telefonu, na który użytkownicy wysyłają kod SMS
+      phoneNumber: '797318071',
+
+      // Dopłata za każdy kilometr (z własnego punktu odbioru)
+      extraPerKm: 1,
+
+      // Opcje miejsc odbioru (jeśli wybierzesz "Własne miejsce", pojawi się pole na km)
+      pickupOptions: [
+        { id: 'centrum', label: 'Częstochowa - centrum', extraKm: 0 },
+        { id: 'polnoc', label: 'Częstochowa - północ', extraKm: 0 },
+        { id: 'dworzec', label: 'Częstochowa - Dworzec PKS', extraKm: 0 },
+        { id: 'custom', label: 'Własne miejsce (wpisz ile km od powyższych)', extraKm: null }
+      ]
+    };
+
+    /*************************************************************************
+     * KONIEC KONFIGURACJI                                                      *
+     *************************************************************************/
+
+    // --- helpery i inicjalizacja UI ---
+    const seatsTable = document.getElementById('seatsTable');
+    const seatSelect = document.getElementById('seatSelect');
+    const pickupSelect = document.getElementById('pickupSelect');
+    const customKmRow = document.getElementById('customKmRow');
+    const customKmInput = document.getElementById('customKm');
+    const extraPerKmView = document.getElementById('extraPerKmView');
+    const phoneView = document.getElementById('phoneView');
+    const countdownEl = document.getElementById('countdown');
+    const endDateText = document.getElementById('endDateText');
+
+    function renderSeatsTable(seats){
+      seatsTable.innerHTML = '';
+      seats.forEach(s=>{
+        const tr = document.createElement('tr');
+        tr.innerHTML = `<td>${s.label}</td><td>${s.currentBid} zł</td><td>${s.leader}</td>`;
+        seatsTable.appendChild(tr);
+      });
     }
-  }
 
-  document.getElementById('pickup').addEventListener('change',()=>{
-    const pickup=document.getElementById('pickup').value;
-    document.getElementById('extraKmLabel').classList.toggle('hidden',pickup!=="inne");
-  });
+    function populateSelects(seats){
+      seatSelect.innerHTML = '';
+      seats.forEach(s=>{
+        const opt = document.createElement('option'); opt.value = s.id; opt.textContent = `${s.label} — ${s.currentBid} zł`;
+        seatSelect.appendChild(opt);
+      });
 
-  function placeBid(){
-    const user=document.getElementById('username').value.trim();
-    const userBid=parseInt(document.getElementById('userBid').value);
-    if(isNaN(userBid)||userBid<=currentBid){
-      alert("Twoja oferta musi być większa od aktualnej kwoty!");
-      return;
+      pickupSelect.innerHTML = '';
+      CONFIG.pickupOptions.forEach(p=>{
+        const opt = document.createElement('option'); opt.value = p.id; opt.textContent = p.label;
+        pickupSelect.appendChild(opt);
+      });
+
+      extraPerKmView.textContent = CONFIG.extraPerKm;
+      phoneView.textContent = CONFIG.phoneNumber;
+      endDateText.textContent = new Date(CONFIG.auctionEndISO).toLocaleString('pl-PL', {timeZone:'Europe/Warsaw'});
     }
-    let finalBid=userBid;
-    if(document.getElementById('pickup').value==="inne"){
-      const km=parseInt(document.getElementById('extraKm').value)||0;
-      finalBid+=km;
+
+    // --- countdown ---
+    const auctionEndDate = new Date(CONFIG.auctionEndISO);
+    function updateCountdown(){
+      const now = new Date();
+      const diff = auctionEndDate - now;
+      if(diff<=0){ countdownEl.textContent = 'Licytacja zakończona'; return; }
+      const d = Math.floor(diff/1000/60/60/24);
+      const h = Math.floor(diff/1000/60/60)%24;
+      const m = Math.floor(diff/1000/60)%60;
+      const s = Math.floor(diff/1000)%60;
+      countdownEl.textContent = `${d}d ${h}h ${m}m ${s}s`;
     }
-    const code=`${user.split(" ")[0]}${user.split(" ")[1]?.charAt(0)||""}, ${finalBid}zł`;
-    document.getElementById('result').innerHTML=`Kwota do zapłaty: <strong>${finalBid} zł</strong><br>Kod: <strong>${code}</strong> <button onclick=\"copyCode('${code}')\">Kopiuj</button><br><small>Prześlij kod SMS-em na numer 797 318 071, aby zatwierdzić licytację.</small>`;
-    document.getElementById('result').classList.remove('hidden');
-  }
+    setInterval(updateCountdown,1000);
 
-  function copyCode(text){
-    navigator.clipboard.writeText(text);
-    alert("Skopiowano kod: "+text);
-  }
-
-  function updateAuction(){
-    currentBid=parseInt(document.getElementById('adminBid').value)||currentBid;
-    currentLeader=document.getElementById('adminLeader').value||currentLeader;
-    document.getElementById('currentBid').innerText=currentBid;
-    document.getElementById('currentLeader').innerText=currentLeader;
-  }
-
-  function updateCountdown(){
-    const now=new Date().getTime();
-    const distance=endTime-now;
-    if(distance<0){
-      document.getElementById('countdown').innerHTML="⛔ Licytacja zakończona";
-      document.getElementById('bidBtn').disabled=true;
-      return;
+    // --- generate short code ---
+    function generateShortCode(fullName, amount){
+      // format: Imię + pierwsza litera nazwiska, np: JanK,45zł
+      const parts = fullName.trim().split(/\s+/);
+      if(parts.length===0) return '';
+      const first = parts[0];
+      const lastInitial = parts.length>1 ? parts[parts.length-1].charAt(0).toUpperCase() : '';
+      return `${first}${lastInitial},${amount}zł`;
     }
-    const days=Math.floor(distance/(1000*60*60*24));
-    const hours=Math.floor((distance%(1000*60*60*24))/(1000*60*60));
-    const minutes=Math.floor((distance%(1000*60*60))/(1000*60));
-    const seconds=Math.floor((distance%(1000*60))/1000);
-    document.getElementById('countdown').innerHTML=`Do końca: ${days}d ${hours}h ${minutes}m ${seconds}s`;
-  }
-  setInterval(updateCountdown,1000);
-</script></body>
+
+    // --- main action: user clicks Licytuj ---
+    document.getElementById('generateBtn').addEventListener('click', ()=>{
+      const fullname = (document.getElementById('fullname').value || '').trim();
+      if(!fullname){ alert('Wpisz swoje imię i nazwisko przed wygenerowaniem kodu.'); return; }
+      const seatId = seatSelect.value;
+      const seat = CONFIG.seats.find(s=>s.id===seatId);
+      if(!seat){ alert('Nie znaleziono miejsca.'); return; }
+      const pickup = pickupSelect.value;
+      let extraKm = 0;
+      if(pickup==='custom'){
+        extraKm = parseInt(customKmInput.value)||0;
+      } else {
+        // opcjonalnie można tu policzyć distance z pickupOptions.extraKm
+        const pick = CONFIG.pickupOptions.find(p=>p.id===pickup);
+        extraKm = pick && pick.extraKm? pick.extraKm: 0;
+      }
+      const total = Number(seat.currentBid) + (extraKm * Number(CONFIG.extraPerKm));
+      document.getElementById('totalAmount').textContent = total;
+
+      const code = generateShortCode(fullname, total);
+      document.getElementById('shortCode').textContent = code;
+      document.getElementById('result').style.display = 'block';
+    });
+
+    // --- copy to clipboard ---
+    document.getElementById('copyBtn').addEventListener('click', async ()=>{
+      const text = document.getElementById('shortCode').textContent;
+      try{
+        await navigator.clipboard.writeText(text);
+        document.getElementById('copyOK').style.display = 'inline';
+        setTimeout(()=>document.getElementById('copyOK').style.display='none',2000);
+      }catch(e){ alert('Nie udało się skopiować. Skopiuj ręcznie.'); }
+    });
+
+    // --- name save to localStorage ---
+    document.getElementById('saveNameBtn').addEventListener('click', ()=>{
+      const v = (document.getElementById('fullname').value || '').trim();
+      if(!v){ alert('Wpisz imię i nazwisko.'); return; }
+      localStorage.setItem('licytacja_fullname', v);
+      document.getElementById('nameSaved').textContent = 'Zapisano lokalnie.';
+      setTimeout(()=>document.getElementById('nameSaved').textContent='',1500);
+    });
+
+    // --- admin panel toggles and quick edit ---
+    document.getElementById('toggleAdmin').addEventListener('click', ()=>{
+      const p = document.getElementById('adminPanel'); p.style.display = p.style.display==='none'?'block':'none';
+      if(p.style.display==='block') renderAdminInputs();
+    });
+
+    function renderAdminInputs(){
+      const root = document.getElementById('adminSeats'); root.innerHTML = '';
+      CONFIG.seats.forEach((s,idx)=>{
+        const div = document.createElement('div'); div.style.marginTop='8px';
+        div.innerHTML = `
+          <label>${s.label}</label>
+          <div class="row">
+            <input data-seatidx="${idx}" class="admin-leader" value="${s.leader}" />
+            <input type="number" data-seatidx="${idx}" class="admin-bid" value="${s.currentBid}" />
+          </div>`;
+        root.appendChild(div);
+      });
+    }
+
+    document.getElementById('saveAdmin').addEventListener('click', ()=>{
+      // update CONFIG object in memory and re-render UI
+      document.querySelectorAll('.admin-bid').forEach(inp=>{
+        const idx = Number(inp.dataset.seatidx); CONFIG.seats[idx].currentBid = Number(inp.value)||0;
+      });
+      document.querySelectorAll('.admin-leader').forEach(inp=>{
+        const idx = Number(inp.dataset.seatidx); CONFIG.seats[idx].leader = inp.value || '—';
+      });
+      // save to localStorage so values persist for this browser
+      localStorage.setItem('licytacja_config', JSON.stringify(CONFIG));
+      populateSelects(CONFIG.seats);
+      renderSeatsTable(CONFIG.seats);
+      alert('Zapisano lokalnie (w localStorage). Aby trwale zmienić, edytuj sekcję CONFIG w kodzie.');
+    });
+
+    document.getElementById('resetConfig').addEventListener('click', ()=>{
+      localStorage.removeItem('licytacja_config');
+      loadInitialConfig();
+      alert('Przywrócono wartości z CONFIG.');
+    });
+
+    // --- handle pickup select -> show/hide custom km ---
+    pickupSelect.addEventListener('change', ()=>{
+      if(pickupSelect.value==='custom') customKmRow.style.display='block'; else customKmRow.style.display='none';
+    });
+
+    // --- load config from localStorage if istnieje ---
+    function loadInitialConfig(){
+      const saved = localStorage.getItem('licytacja_config');
+      if(saved){
+        try{ const parsed = JSON.parse(saved); Object.assign(CONFIG, parsed); }
+        catch(e){ console.warn('błąd odczytu config z localstorage', e); }
+      }
+      renderSeatsTable(CONFIG.seats);
+      populateSelects(CONFIG.seats);
+      updateCountdown();
+      // preload saved name
+      const savedName = localStorage.getItem('licytacja_fullname'); if(savedName) document.getElementById('fullname').value = savedName;
+    }
+
+    // initialize
+    loadInitialConfig();
+
+  </script>
+</body>
 </html>
