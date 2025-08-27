@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>XLicytacja miejsc w I30</title>
+  <title>XXXLicytacja miejsc w I30</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🚗</text></svg>">
   <style>
     select option {
@@ -281,12 +281,15 @@
     }
 
     function populateSelects(seats){
-      seatSelect.innerHTML = '';
-      seats.forEach(s=>{
+      pickupSelect.innerHTML = '';
+      CONFIG.pickupOptions.forEach(p => {
         const opt = document.createElement('option');
-        opt.value = s.id; opt.textContent = s.label;
-        seatSelect.appendChild(opt);
+        opt.value = p.id;               // wartość formularza (id)
+        opt.textContent = p.shortLabel; // to co będzie widoczne w liście — shortLabel
+        opt.title = p.label;           // (opcjonalnie) pełny opis jako tooltip
+        pickupSelect.appendChild(opt);
       });
+
       pickupSelect.innerHTML = '';
       CONFIG.pickupOptions.forEach(p=>{
         const opt = document.createElement('option'); opt.value = p.id; opt.textContent = p.label;
