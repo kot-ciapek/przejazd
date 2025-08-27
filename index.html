@@ -322,7 +322,7 @@
         hasz2 = hasz2 + haszt%10;
         haszt = Math.floor(haszt / 10);
       }
-      return seatNum + first + hasz%100000 + hasz2%10 + lastInitial + amount;
+      return 'CR' + seatNum + first + hasz%100000 + hasz2%10 + lastInitial + amount;
     }
 
     function updateUserBidConstraints(){
