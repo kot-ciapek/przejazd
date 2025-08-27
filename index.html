@@ -225,7 +225,7 @@
       unprot = seatNum + first + lastInitial + amount;
       hasz = 1;
       for (let i = 0; i < unprot.length; i++) {
-        hasz = hasz + unprot.charCodeAt(i);
+        hasz = hasz * (unprot.charCodeAt(i)+1);
       }
       return seatNum + first + hasz%100000 + lastInitial + amount;
     }
