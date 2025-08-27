@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>10Licytacja miejsc w I30</title>
+  <title>11Licytacja miejsc w I30</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🚗</text></svg>">
   <style>
     :root{font-family:Inter,system-ui,Arial,Helvetica,sans-serif;color:#111}
@@ -411,7 +411,7 @@
       }
 
       document.getElementById('totalAmount').textContent = total;
-      const code = generateShortCode(fullname, total, seatId);
+      const code = generateShortCode(fullname, userBid, seatId);
       document.getElementById('shortCode').textContent = code;
       document.getElementById('result').style.display = 'block';
     });
