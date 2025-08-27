@@ -63,7 +63,7 @@
 
     <!-- pole do wpisania oferty -->
     <label>Twoja oferta w Polskich złotych (musi być większa od poprzedniej oferty o conajmniej 10 groszy): </span></label>
-    <input type="number" id="userBid" min="1" />
+    <input type="number" id="userBid" min="0.1" />
 
     <label>Miejsce odbioru</label>
     <select id="pickupSelect"></select>
@@ -214,13 +214,20 @@
     }
     setInterval(updateCountdown,1000);
 
+
+    // hashowanie kodu i jego generowanie
     function generateShortCode(fullName, amount, seatId){
       const parts = fullName.trim().split(/\s+/);
       if(parts.length===0) return '';
-      const first = parts[0];
+      const first = parts[0].toUpperCase();
       const lastInitial = parts.length>1 ? parts[parts.length-1].charAt(0).toUpperCase() : '';
       const seatNum = seatId.replace('seat','');
-      return seatNum + first + lastInitial + amount;
+      unprot = seatNum + first + lastInitial + amount;
+      hasz = 1;
+      for (let i = 0; i < unprot.length; i++) {
+        hasz = hasz + unprot.charCodeAt(i);
+      }
+      return seatNum + first + hasz%100000 + lastInitial + amount;
     }
 
     function updateUserBidConstraints(){
@@ -228,12 +235,12 @@
       const seat = CONFIG.seats.find(s=>s.id===seatId);
       const bidInput = document.getElementById('userBid');
       if(seat){
-        const min = Math.max(1, seat.currentBid + MIN_BID_STEP);
+        const min = Math.max(0, seat.currentBid + MIN_BID_STEP);
         bidInput.min = String(min);
         if(!bidInput.value || Number(bidInput.value) < min) bidInput.value = String(min);
       } else {
-        bidInput.min = '1';
-        if(!bidInput.value) bidInput.value = '1';
+        bidInput.min = '0.1';
+        if(!bidInput.value) bidInput.value = '0.1';
       }
     }
 
