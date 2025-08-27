@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>12Licytacja miejsc w I30</title>
+  <title>Licytacja miejsc w I30</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🚗</text></svg>">
   <style>
     :root{font-family:Inter,system-ui,Arial,Helvetica,sans-serif;color:#111}
@@ -142,7 +142,7 @@
     <select id="seatSelect"></select>
 
     <!-- pole do wpisania oferty -->
-    <label>Twoja oferta w Polskich złotych (musi być większa od poprzedniej oferty o conajmniej 10 groszy): </span></label>
+    <label>Twoja oferta w Polskiej Walucie (musi być większa od poprzedniej oferty o conajmniej 10 groszy): </span></label>
     <input type="number" id="userBid" min="0.1" />
 
     <label>Miejsce odbioru</label>
@@ -271,7 +271,7 @@
       seatSelect.innerHTML = '';
       seats.forEach(s=>{
         const opt = document.createElement('option');
-        opt.value = s.id; opt.textContent = s.label + ' — ' + s.currentBid + ' zł';
+        opt.value = s.id; opt.textContent = s.label;
         seatSelect.appendChild(opt);
       });
       pickupSelect.innerHTML = '';
