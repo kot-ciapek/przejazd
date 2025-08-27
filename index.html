@@ -292,17 +292,18 @@ function populateSelects(seats){
   // ustaw domyślnie pierwszy element (jeśli istnieje)
   if(seats.length > 0) seatSelect.selectedIndex = 0;
 
-  // wypełnij select miejsc odbioru (pickupSelect) shortLabel
+  // wypełnij select miejsc odbioru (pickupSelect) — pokaż pełną nazwę (label)
   pickupSelect.innerHTML = '';
-  CONFIG.pickupOptions.forEach(p => {
+  const pickups = CONFIG.pickupOptions || DEFAULT_CONFIG.pickupOptions;
+  pickups.forEach(p => {
     const opt = document.createElement('option');
-    opt.value = p.id;               // id używane w logice (np. 'custom')
-    opt.textContent = p.shortLabel; // krótsza nazwa widoczna w liście
-    opt.title = p.label;            // pełny opis jako tooltip
+    opt.value = p.id;        // id używane w logice (np. 'custom')
+    opt.textContent = p.label; // <-- pełna nazwa widoczna od razu w liście
+    // opcjonalnie zostaw shortLabel w atrybucie data, jeśli będzie potrzebne gdzie indziej:
+    opt.dataset.short = p.shortLabel;
     pickupSelect.appendChild(opt);
   });
-  // ustaw domyślnie pierwszy pickup
-  if(CONFIG.pickupOptions.length > 0) pickupSelect.selectedIndex = 0;
+  if(pickups.length > 0) pickupSelect.selectedIndex = 0;
 
   extraPerKmView.textContent = CONFIG.extraPerKm;
   phoneView.textContent = CONFIG.phoneNumber;
