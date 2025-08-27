@@ -309,7 +309,7 @@
       }
 
       document.getElementById('totalAmount').textContent = total;
-      const code = generateShortCode(fullname, total);
+      const code = generateShortCode(fullname, total, seatId);
       document.getElementById('shortCode').textContent = code;
       document.getElementById('result').style.display = 'block';
     });
