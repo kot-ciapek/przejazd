@@ -131,7 +131,7 @@
 
   <div class="card">
     <h2>Wejdź i wygeneruj kod licytacji</h2>
-    <label>Twoje imię i nazwisko</label>
+    <label>Wpisz swoje imię i nazwisko</label>
     <div class="row">
       <input id="fullname" placeholder="np. Adam Starak" />
       <button class="btn" id="saveNameBtn">Zapisz</button>
@@ -163,7 +163,7 @@
       <div style="margin-top:6px">Kod do wysłania: <strong id="shortCode"></strong>
         <button class="btn-ghost" id="copyBtn">Kopiuj</button><span id="copyOK" class="copyok" style="display:none">Skopiowano!</span>
       </div>
-      <p style="margin-top:8px">Wyślij powyższy kod SMS-em na numer: <strong id="phoneView"></strong> (koszt według taryfy operatora) </p>
+      <p style="margin-top:8px">Wyślij powyższy kod SMS-em na numer: <strong id="phoneView"></strong> (koszt według taryfy operatora) Wysłanie kodu jest równoznaczne z zaakceptowaniem w przypadku wygranej zadeklarowanej kwoty.</p>
     </div>
   </div>
 
@@ -185,7 +185,7 @@
   </div>
 
   <footer>
-    <div class="muted">Licytacja trwa do 29 sierpnia 2025, 15:00.</div>
+    <div class="muted">Licytacja trwa do 29 sierpnia 2025, 15:00. W przypadku wygranej zostaną wysłane linki z potwierdzeniem na numer, z którego był wysłany kod licytacji</div>
   </footer>
 
     <!-- obrazek podróży -->
@@ -193,7 +193,7 @@
     <!-- jeśli Twoja przeglądarka/serwer nie obsługuje znaków w nazwie pliku dobrze, użyj zakodowanej nazwy:
         src="i30%20podr%C3%B3%C5%BC.png"  -->
     <img src="i30 podróż.png" alt="i30 podróż — ilustracja" class="hero-image" />
-    <div class="img-caption">auto do przejazdu czyli hundai i30 — miłego podróżowania!</div>
+    <div class="img-caption">auto do przejazdu czyli hundai i30 — miłego podróżowania życzy firma Tester Oryginal 😐</div>
   </div>
 
 
@@ -214,7 +214,7 @@
       ],
       auctionEndISO: '2025-08-29T15:00:00+02:00',
       phoneNumber: '+48 797318071',
-      extraPerKm: 1,
+      extraPerKm: 0.80,
       pickupOptions: [
         { id: 'wrzosowiak', label: 'Częstochowa - Wrzosowiak - przystanek Rutkiewicz', extraKm: 0 },
         { id: 'ostatnigrosz', label: 'Częstochowa - Ostatni Grosz - Netto na ul. Bór', extraKm: 0 },
@@ -407,7 +407,7 @@
       if(pushed){
         showToast('Oferta przyjęta i zsynchronizowana z serwerem.');
       } else {
-        showToast('Oferta przyjęta lokalnie (serwer niedostępny).');
+        showToast('Twój unikalny kod oferty został wygenerowany!');
       }
 
       document.getElementById('totalAmount').textContent = total;
