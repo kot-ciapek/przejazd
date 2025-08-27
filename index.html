@@ -27,6 +27,16 @@
       vertical-align: middle; /* wyśrodkowanie pionowe */
       padding: 6px 10px;    /* trochę odstępu dla czytelności */
     }
+    /* historia: domyślnie szary tekst */
+    #historyTable tbody tr {
+      color: #888888; /* szary */
+    }
+
+    /* wiersze aktywne (odpowiadają aktualnym ofertom) - normalny kolor */
+    #historyTable tbody tr.active {
+      color: inherit; /* przywraca domyślny kolor tekstu (czarny) */
+      font-weight: 600; /* opcjonalnie lekko pogrubione, żeby wyróżnić */
+    }
     :root{font-family:Inter,system-ui,Arial,Helvetica,sans-serif;color:#111}
     body{max-width:920px;margin:28px auto;padding:18px}
     h1,h2{margin:8px 0}
@@ -391,19 +401,45 @@ function populateSelects(seats){
       { date: "27 sierpnia", amount: 0.1, seat: "Miejsce z tyłu za pasażerem", desc: "Ksenia Gasiak ❤️" },
       { date: "27 sierpnia", amount: 0, seat: "Miejsce na środku z tyłu	", desc: "Igor 🎮oń" }
     ];
+
     function renderHistory() {
       const tbody = document.querySelector("#historyTable tbody");
       tbody.innerHTML = ""; // wyczyść tabelę
 
+      // helper: porównanie kwot z tolerancją (dla liczb zmiennoprzecinkowych)
+      const sameAmount = (a, b) => {
+        const na = Number(a) || 0;
+        const nb = Number(b) || 0;
+        return Math.abs(na - nb) < 0.001;
+      };
+
       HISTORY.forEach(item => {
         const tr = document.createElement("tr");
+
+        // sprawdź czy to wpis odpowiada aktualnemu stanowi dla danego fotela
+        const seatObj = CONFIG.seats.find(s => (s.label === item.seat) || (s.id === item.seat));
+        const isActive = !!(seatObj && sameAmount(seatObj.currentBid, item.amount));
+        if (isActive) tr.classList.add('active');
 
         const tdDate = document.createElement("td");
         tdDate.textContent = item.date;
         tr.appendChild(tdDate);
 
         const tdDesc = document.createElement("td");
-        tdDesc.textContent = item.desc;
+        // rozbijamy imię/nazwisko i wstawiamy <br> po pierwszym słowie (bezpiecznie)
+        const name = String(item.desc || '').trim();
+        if (name.length === 0) {
+          tdDesc.textContent = '';
+        } else {
+          const parts = name.split(/\s+/);
+          if (parts.length >= 2) {
+            const first = escapeHtml(parts[0]);
+            const rest = escapeHtml(parts.slice(1).join(' '));
+            tdDesc.innerHTML = first + '<br>' + rest;
+          } else {
+            tdDesc.textContent = name;
+          }
+        }
         tr.appendChild(tdDesc);
 
         const tdSeat = document.createElement("td");
@@ -411,12 +447,14 @@ function populateSelects(seats){
         tr.appendChild(tdSeat);
 
         const tdAmount = document.createElement("td");
-        tdAmount.textContent = item.amount + " zł";
+        tdAmount.textContent = (Number(item.amount) || 0) + " zł";
         tr.appendChild(tdAmount);
 
         tbody.appendChild(tr);
       });
     }
+
+
 
     renderHistory();
 
