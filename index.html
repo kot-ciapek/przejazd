@@ -280,27 +280,36 @@
       });
     }
 
-    function populateSelects(seats){
-      pickupSelect.innerHTML = '';
-      CONFIG.pickupOptions.forEach(p => {
-        const opt = document.createElement('option');
-        opt.value = p.id;               // wartość formularza (id)
-        opt.textContent = p.shortLabel; // to co będzie widoczne w liście — shortLabel
-        opt.title = p.label;           // (opcjonalnie) pełny opis jako tooltip
-        pickupSelect.appendChild(opt);
-      });
+function populateSelects(seats){
+  // wypełnij select miejsc (seatSelect)
+  seatSelect.innerHTML = '';
+  seats.forEach(s => {
+    const opt = document.createElement('option');
+    opt.value = s.id;
+    opt.textContent = s.label;
+    seatSelect.appendChild(opt);
+  });
+  // ustaw domyślnie pierwszy element (jeśli istnieje)
+  if(seats.length > 0) seatSelect.selectedIndex = 0;
 
-      pickupSelect.innerHTML = '';
-      CONFIG.pickupOptions.forEach(p=>{
-        const opt = document.createElement('option'); opt.value = p.id; opt.textContent = p.label;
-        pickupSelect.appendChild(opt);
-      });
-      extraPerKmView.textContent = CONFIG.extraPerKm;
-      phoneView.textContent = CONFIG.phoneNumber;
-      endDateText.textContent = new Date(CONFIG.auctionEndISO).toLocaleString('pl-PL', {timeZone:'Europe/Warsaw'});
+  // wypełnij select miejsc odbioru (pickupSelect) shortLabel
+  pickupSelect.innerHTML = '';
+  CONFIG.pickupOptions.forEach(p => {
+    const opt = document.createElement('option');
+    opt.value = p.id;               // id używane w logice (np. 'custom')
+    opt.textContent = p.shortLabel; // krótsza nazwa widoczna w liście
+    opt.title = p.label;            // pełny opis jako tooltip
+    pickupSelect.appendChild(opt);
+  });
+  // ustaw domyślnie pierwszy pickup
+  if(CONFIG.pickupOptions.length > 0) pickupSelect.selectedIndex = 0;
 
-      updateUserBidConstraints();
-    }
+  extraPerKmView.textContent = CONFIG.extraPerKm;
+  phoneView.textContent = CONFIG.phoneNumber;
+  endDateText.textContent = new Date(CONFIG.auctionEndISO).toLocaleString('pl-PL', {timeZone:'Europe/Warsaw'});
+
+  updateUserBidConstraints();
+}
 
     const auctionEndDate = new Date(CONFIG.auctionEndISO);
     function updateCountdown(){
