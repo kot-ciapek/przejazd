@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Licytacja miejsc w I30</title>
+  <title>01Licytacja miejsc w I30</title>
   <style>
     :root{font-family:Inter,system-ui,Arial,Helvetica,sans-serif;color:#111}
     body{max-width:920px;margin:28px auto;padding:18px}
@@ -223,10 +223,9 @@
       const lastInitial = parts.length>1 ? parts[parts.length-1].charAt(0).toUpperCase() : '';
       const seatNum = seatId.replace('seat','');
       let unprot = seatNum + first + lastInitial + amount;
-      let hasz = 1;
+      let hasz = 12345;
       for (let i = 0; i < unprot.length; i++) {
-        hasz = hasz * (unprot.charCodeAt(i)+1);
-        hasz = hasz%100000;
+        hasz = (hasz * (unprot.charCodeAt(i)+1) + i) % 100000;
       }
       let haszt = hasz;
       let hasz2 = 0;
