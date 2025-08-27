@@ -222,12 +222,19 @@
       const first = parts[0].toUpperCase();
       const lastInitial = parts.length>1 ? parts[parts.length-1].charAt(0).toUpperCase() : '';
       const seatNum = seatId.replace('seat','');
-      unprot = seatNum + first + lastInitial + amount;
-      hasz = 1;
+      let unprot = seatNum + first + lastInitial + amount;
+      let hasz = 1;
       for (let i = 0; i < unprot.length; i++) {
         hasz = hasz * (unprot.charCodeAt(i)+1);
+        hasz = hasz%100000;
       }
-      return seatNum + first + hasz%100000 + lastInitial + amount;
+      let haszt = hasz;
+      let hasz2 = 0;
+      for (let i = 0; i < 6; i++) {
+        hasz2 = hasz2 + haszt%10;
+        haszt = Math.floor(haszt / 10);
+      }
+      return seatNum + first + hasz%100000 + hasz2%10 + lastInitial + amount;
     }
 
     function updateUserBidConstraints(){
