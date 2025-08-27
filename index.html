@@ -178,7 +178,7 @@
       <div style="margin-top:6px">Kod do wysłania: <strong id="shortCode"></strong>
         <button class="btn-ghost" id="copyBtn">Kopiuj</button><span id="copyOK" class="copyok" style="display:none">Skopiowano!</span>
       </div>
-      <p style="margin-top:8px">Wyślij powyższy kod SMS-em na numer: <strong id="phoneView"></strong> (koszt według taryfy operatora).<br>Wysłanie kodu jest równoznaczne z zaakceptowaniem w przypadku wygranej zadeklarowanej kwoty.</p>
+      <p style="margin-top:8px">Wyślij powyższy kod SMS-em na numer: <strong id="phoneView"></strong><br>Wysłanie kodu jest równoznaczne z zaakceptowaniem w przypadku wygranej zadeklarowanej kwoty.</p>
     </div>
   </div>
 
@@ -226,9 +226,9 @@
     const DEFAULT_CONFIG = {
       seats: [
         { id: 'seat1', label: 'Fotel obok najlepszego kierowcy 😎', currentBid: 0, leader: '(puste)' },
-        { id: 'seat2', label: 'Miejsce z tyłu za pasażerem', currentBid: 0, leader: '(puste)' },
-        { id: 'seat3', label: 'Miejsce na środku z tyłu', currentBid: 0, leader: '(puste)' },
-        { id: 'seat4', label: 'Miejsce za super kierowcą', currentBid: 0, leader: '(puste)' }
+        { id: 'seat2', label: 'Miejsce z tyłu za pasażerem',         currentBid: 0, leader: '(puste)' },
+        { id: 'seat3', label: 'Miejsce na środku z tyłu',            currentBid: 0, leader: '(puste)' },
+        { id: 'seat4', label: 'Miejsce za super kierowcą',           currentBid: 0, leader: '(puste)' }
       ],
       auctionEndISO: '2025-08-29T15:00:00+02:00',
       phoneNumber: '+48 797318071',
