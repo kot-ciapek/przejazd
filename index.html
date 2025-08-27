@@ -10,8 +10,16 @@
       white-space: normal;
       word-wrap: break-word;
     }
+    /* standardowy rozmiar selecta */
     #pickupSelect {
-      font-size: 12px; /* rozmiar widoczny po zamknięciu listy */
+      font-size: 15px; /* normalny rozmiar na desktopie */
+    }
+
+    /* dla ekranów węższych niż 600px (telefony) */
+    @media (max-width: 500px) {
+      #pickupSelect {
+        font-size: 11.5px; /* mniejszy rozmiar na telefonie */
+      }
     }
     :root{font-family:Inter,system-ui,Arial,Helvetica,sans-serif;color:#111}
     body{max-width:920px;margin:28px auto;padding:18px}
