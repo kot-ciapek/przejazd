@@ -21,6 +21,12 @@
         font-size: 11px; /* mniejszy rozmiar na telefonie */
       }
     }
+    #historyTable th,
+    #historyTable td {
+      text-align: center;   /* wyśrodkowanie poziome */
+      vertical-align: middle; /* wyśrodkowanie pionowe */
+      padding: 6px 10px;    /* trochę odstępu dla czytelności */
+    }
     :root{font-family:Inter,system-ui,Arial,Helvetica,sans-serif;color:#111}
     body{max-width:920px;margin:28px auto;padding:18px}
     h1,h2{margin:8px 0}
@@ -157,8 +163,8 @@
     <select id="seatSelect"></select>
 
     <!-- pole do wpisania oferty -->
-    <label>Twoja oferta w Polskiej Walucie (musi być większa od poprzedniej oferty o conajmniej 10 groszy): </span></label>
-    <input type="number" id="userBid" min="0.1" />
+    <label>Wpisz swoją ofertę (musi być większa od poprzedniej oferty o conajmniej 10 groszy): </span></label>
+    <input type="number" id="userBid" min="1" />
 
     <label>Miejsce odbioru</label>
     <select id="pickupSelect"></select>
@@ -211,6 +217,25 @@
     <div class="img-caption">auto do przejazdu czyli hundai i30 — miłego podróżowania życzy firma Tester Oryginal 😐</div>
   </div>
 
+  <section id="historySection">
+    <h2>Historia licytacji</h2>
+    <div class="table-container">
+      <table id="historyTable">
+        <thead>
+          <tr>
+            <th>Data</th>
+            <th>Osoba</th>
+            <th>Fotel</th>
+            <th>Kwota</th>
+          </tr>
+        </thead>
+        <tbody>
+          <!-- wpisy będą dodane przez JS -->
+        </tbody>
+      </table>
+    </div>
+  </section>
+
   <footer>
     <div class="muted" style="text-align: center;">stronę wykonał Szymon Kopanicki (kontakt: kopanicki2007@gmail.com)</div>
   </footer>
@@ -221,26 +246,26 @@
     // Local config + server sync
     const STORAGE_KEY = 'licytacja_config_v1';
     const SERVER_POLL_MS = 3000; // poll server every 3s
-    const MIN_BID_STEP = 0.1; // minimalny krok oferty
+    const MIN_BID_STEP = 1; // minimalny krok oferty
 
     const DEFAULT_CONFIG = {
       seats: [
-        { id: 'seat1', label: 'Fotel obok najlepszego kierowcy 😎', currentBid: 0, leader: '(puste)' },
-        { id: 'seat2', label: 'Miejsce z tyłu za pasażerem',         currentBid: 0, leader: '(puste)' },
-        { id: 'seat3', label: 'Miejsce na środku z tyłu',            currentBid: 0, leader: '(puste)' },
-        { id: 'seat4', label: 'Miejsce za super kierowcą',           currentBid: 0, leader: '(puste)' }
+        { id: 'seat1', label: 'Fotel obok najlepszego kierowcy 😎', currentBid: 0.1, leader: 'Tymon 🧈wski' },
+        { id: 'seat2', label: 'Miejsce z tyłu za pasażerem',         currentBid: 0.1, leader: 'Ksenia Gasiak ❤️' },
+        { id: 'seat3', label: 'Miejsce na środku z tyłu',            currentBid: 0, leader: 'Igor 🎮oń' },
+        { id: 'seat4', label: 'Miejsce za super kierowcą',           currentBid: 6.7, leader: 'Kacper 🌿💧ek' }
       ],
       auctionEndISO: '2025-08-29T15:00:00+02:00',
       phoneNumber: '+48 797318071',
       extraPerKm: 0.80,
       pickupOptions: [
-        { id: 'wrzosowiak', label: 'Częstochowa - Wrzosowiak - przystanek Rutkiewicz', shortLabel: 'Częstochowa - Wrzosowiak', extraKm: 0 },
-        { id: 'ostatnigrosz', label: 'Częstochowa - Ostatni Grosz - Netto na ul. Bór', shortLabel: 'Częstochowa - Ostatni Grosz', extraKm: 0 },
-        { id: 'centrum', label: 'Częstochowa - Centrum - parking przy dworcu PKS', shortLabel: 'Częstochowa - Centrum', extraKm: 0 },
-        { id: 'północ', label: 'Częstochowa - Północ - KFC przy M1', shortLabel: 'Częstochowa - Północ', extraKm: 0 },
-        { id: 'wierzchowisko', label: 'Wierzchowisko - koniec ul. Długiej po stronie zachodniej', shortLabel: 'Wierzchowisko', extraKm: 0 },
-        { id: 'radostków', label: 'Radostków - szkoła podstawowa', shortLabel: 'Radostków', extraKm: 0 },
-        { id: 'custom', label: 'Własne miejsce', shortLabel: 'Własne miejsce', extraKm: null }
+        { id: '1', label: 'Częstochowa - Wrzosowiak - przystanek Rutkiewicz', shortLabel: 'Częstochowa - Wrzosowiak', extraKm: 0 },
+        { id: '2', label: 'Częstochowa - Ostatni Grosz - Netto na ul. Bór', shortLabel: 'Częstochowa - Ostatni Grosz', extraKm: 0 },
+        { id: '3', label: 'Częstochowa - Centrum - parking przy dworcu PKS', shortLabel: 'Częstochowa - Centrum', extraKm: 0 },
+        { id: '4', label: 'Częstochowa - Północ - KFC przy M1', shortLabel: 'Częstochowa - Północ', extraKm: 0 },
+        { id: '5', label: 'Wierzchowisko - koniec ul. Długiej po stronie zachodniej', shortLabel: 'Wierzchowisko', extraKm: 0 },
+        { id: '6', label: 'Radostków - szkoła podstawowa', shortLabel: 'Radostków', extraKm: 0 },
+        { id: '0', label: 'Własne miejsce', shortLabel: 'Własne miejsce', extraKm: null }
       ]
     };
 
@@ -337,11 +362,13 @@ function populateSelects(seats){
     // hashowanie kodu i jego generowanie
     function generateShortCode(fullName, amount, seatId){
       const parts = fullName.trim().split(/\s+/);
+      const place = pickupSelect.value;
+      const name = fullName.toUpperCase().replace(/\s+/g, '');
       if(parts.length===0) return '';
       const first = parts[0].toUpperCase();
-      const lastInitial = parts.length>1 ? parts[parts.length-1].charAt(0).toUpperCase() : '';
+      const Initial = parts.length>1 ? parts[parts.length-1].toUpperCase() : '';
       const seatNum = seatId.replace('seat','');
-      let unprot = seatNum + first + lastInitial + amount;
+      let unprot = seatNum + first + Initial + amount;
       let hasz = 12345;
       for (let i = 0; i < unprot.length; i++) {
         hasz = (hasz * (unprot.charCodeAt(i)+1) + i) % 100000;
@@ -352,8 +379,45 @@ function populateSelects(seats){
         hasz2 = hasz2 + haszt%10;
         haszt = Math.floor(haszt / 10);
       }
-      return 'CR' + seatNum + first + hasz%100000 + hasz2%10 + lastInitial + amount;
+      return 'CR' + seatNum + name + (hasz % 100000) + (hasz2 % 10) + '_' + place + (parseInt(customKmInput.value) || 0) + '_' + amount;
     }
+
+    // historia
+    const HISTORY = [
+      { date: "27 sierpnia", amount: 6.7, seat: "Miejsce za super kierowcą", desc: "Kacper 🌿💧ek" },
+      { date: "27 sierpnia", amount: 0.2, seat: "Miejsce za super kierowcą", desc: "Kacper 🌿💧ek" },
+      { date: "27 sierpnia", amount: 0.1, seat: "Fotel obok najlepszego kierowcy 😎", desc: "Tymon 🧈wski" },
+      { date: "27 sierpnia", amount: 0.1, seat: "Miejsce z tyłu za pasażerem", desc: "Ksenia Gasiak ❤️" },
+      { date: "27 sierpnia", amount: 0, seat: "Miejsce na środku z tyłu	", desc: "Igor 🎮oń" }
+    ];
+    function renderHistory() {
+      const tbody = document.querySelector("#historyTable tbody");
+      tbody.innerHTML = ""; // wyczyść tabelę
+
+      HISTORY.forEach(item => {
+        const tr = document.createElement("tr");
+
+        const tdDate = document.createElement("td");
+        tdDate.textContent = item.date;
+        tr.appendChild(tdDate);
+
+        const tdDesc = document.createElement("td");
+        tdDesc.textContent = item.desc;
+        tr.appendChild(tdDesc);
+
+        const tdSeat = document.createElement("td");
+        tdSeat.textContent = item.seat;
+        tr.appendChild(tdSeat);
+
+        const tdAmount = document.createElement("td");
+        tdAmount.textContent = item.amount + " zł";
+        tr.appendChild(tdAmount);
+
+        tbody.appendChild(tr);
+      });
+    }
+
+    renderHistory();
 
     function updateUserBidConstraints(){
       const seatId = seatSelect.value;
@@ -361,11 +425,11 @@ function populateSelects(seats){
       const bidInput = document.getElementById('userBid');
       if(seat){
         const min = Math.max(0, seat.currentBid + MIN_BID_STEP);
-        bidInput.min = String(min);
+        bidInput.min = String(Math.floor(Math.max(1, seat.currentBid) + 1)-1);
         if(!bidInput.value || Number(bidInput.value) < min) bidInput.value = String(min);
       } else {
-        bidInput.min = '0.1';
-        if(!bidInput.value) bidInput.value = '0.1';
+        bidInput.min = '1';
+        if(!bidInput.value) bidInput.value = '1';
       }
     }
 
@@ -422,15 +486,8 @@ function populateSelects(seats){
       }
       const pickup = pickupSelect.value;
       let extraKm = 0;
-      if(pickup==='custom'){ extraKm = parseInt(customKmInput.value)||0; }
+      if(pickup==='0'){ extraKm = parseInt(customKmInput.value)||0; }
       const total = userBid + (extraKm * CONFIG.extraPerKm);
-
-      // update seat locally
-      // seat.currentBid = userBid;
-      // seat.leader = fullname;
-      // saveConfig(CONFIG);
-      // renderSeatsTable(CONFIG.seats);
-      // populateSelects(CONFIG.seats);
 
       // push to server (best-effort)
       const pushed = await pushSeatsToServer();
@@ -457,7 +514,7 @@ function populateSelects(seats){
     });
 
     pickupSelect.addEventListener('change', ()=>{
-      if(pickupSelect.value==='custom') customKmRow.style.display='block'; else customKmRow.style.display='none';
+      if(pickupSelect.value==='0') customKmRow.style.display='block'; else customKmRow.style.display='none';
     });
 
     // admin controls (same as before)
