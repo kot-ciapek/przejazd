@@ -263,12 +263,12 @@
     if (minStepView) {
       minStepView.textContent = MIN_BID_STEP;
     }
-    DEFAULT_CONFIG.pickupOptions.forEach(opt => {
-      const option = document.createElement('option');
-      option.value = opt.shortLabel;   // co się wyświetli po wyborze
-      option.textContent = opt.label;  // co widać na liście
-      pickupSelect.appendChild(option);
-    });
+    // DEFAULT_CONFIG.pickupOptions.forEach(opt => {
+    //   const option = document.createElement('option');
+    //   option.value = opt.shortLabel;   // co się wyświetli po wyborze
+    //   option.textContent = opt.label;  // co widać na liście
+    //   pickupSelect.appendChild(option);
+    // });
 
 
     function renderSeatsTable(seats){
