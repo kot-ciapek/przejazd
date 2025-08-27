@@ -10,6 +10,11 @@
       white-space: normal;
       word-wrap: break-word;
     }
+    #pickupSelect option {
+      font-size: 13px;      /* ustaw rozmiar jaki chcesz */
+      line-height: 1.1;     /* opcjonalnie, żeby zmniejszyć wysokość wiersza */
+      padding: 2px 6px;     /* opcjonalnie, poprawia wygląd w niektórych przeglądarkach */
+    }
     :root{font-family:Inter,system-ui,Arial,Helvetica,sans-serif;color:#111}
     body{max-width:920px;margin:28px auto;padding:18px}
     h1,h2{margin:8px 0}
@@ -223,9 +228,9 @@
       phoneNumber: '+48 797318071',
       extraPerKm: 0.80,
       pickupOptions: [
-        { id: 'wrzosowiak', label: 'Częstochowa - Wrzosowiak - przystanek Rutkiewicz', shortLabel: 'Częstochowa - Wrzosowiak', extraKm: 0 },
-        { id: 'ostatnigrosz', label: 'Częstochowa - Ostatni Grosz - Netto na ul. Bór', shortLabel: 'Częstochowa - Ostatni Grosz', extraKm: 0 },
-        { id: 'centrum', label: 'Częstochowa - Centrum - parking przy dworcu PKS', shortLabel: 'Częstochowa - Centrum', extraKm: 0 },
+        { id: 'wrzosowiak', label: 'Częstochowa - Wrzosowiak - przyst. Rutkiewicz', shortLabel: 'Częstochowa - Wrzosowiak', extraKm: 0 },
+        { id: 'ostatnigrosz', label: 'Częstochowa - Ostatni Grosz - Netto', shortLabel: 'Częstochowa - Ostatni Grosz', extraKm: 0 },
+        { id: 'centrum', label: 'Częstochowa - Centrum - dworzec PKS', shortLabel: 'Częstochowa - Centrum', extraKm: 0 },
         { id: 'północ', label: 'Częstochowa - Północ - KFC przy M1', shortLabel: 'Częstochowa - Północ', extraKm: 0 },
         { id: 'wierzchowisko', label: 'Wierzchowisko - koniec ul. Długiej po stronie zachodniej', shortLabel: 'Wierzchowisko', extraKm: 0 },
         { id: 'radostków', label: 'Radostków - szkoła podstawowa', shortLabel: 'Radostków', extraKm: 0 },
@@ -263,13 +268,6 @@
     if (minStepView) {
       minStepView.textContent = MIN_BID_STEP;
     }
-    // DEFAULT_CONFIG.pickupOptions.forEach(opt => {
-    //   const option = document.createElement('option');
-    //   option.value = opt.shortLabel;   // co się wyświetli po wyborze
-    //   option.textContent = opt.label;  // co widać na liście
-    //   pickupSelect.appendChild(option);
-    // });
-
 
     function renderSeatsTable(seats){
       seatsTable.innerHTML = '';
