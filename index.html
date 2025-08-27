@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>11Licytacja miejsc w I30</title>
+  <title>Licytacja miejsc w I30</title>
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🚗</text></svg>">
   <style>
     select option {
@@ -223,13 +223,13 @@
       phoneNumber: '+48 797318071',
       extraPerKm: 0.80,
       pickupOptions: [
-        { id: 'wrzosowiak', label: 'Częstochowa - Wrzosowiak - przystanek Rutkiewicz', extraKm: 0 },
-        { id: 'ostatnigrosz', label: 'Częstochowa - Ostatni Grosz - Netto na ul. Bór', extraKm: 0 },
-        { id: 'centrum', label: 'Częstochowa - Centrum - parking przy dworcu PKS', extraKm: 0 },
-        { id: 'północ', label: 'Częstochowa - Północ - KFC przy M1 ', extraKm: 0 },
-        { id: 'wierzchowisko', label: 'Wierzchowisko - koniec ul. Długiej po stronie zachodniej', extraKm: 0 },
-        { id: 'radostków', label: 'Radostków - szkoła podstawowa', extraKm: 0 },
-        { id: 'custom', label: 'Własne miejsce', extraKm: null }
+        { id: 'wrzosowiak', label: 'Częstochowa - Wrzosowiak - przystanek Rutkiewicz', shortLabel: 'Częstochowa - Wrzosowiak', extraKm: 0 },
+        { id: 'ostatnigrosz', label: 'Częstochowa - Ostatni Grosz - Netto na ul. Bór', shortLabel: 'Częstochowa - Ostatni Grosz', extraKm: 0 },
+        { id: 'centrum', label: 'Częstochowa - Centrum - parking przy dworcu PKS', shortLabel: 'Częstochowa - Centrum', extraKm: 0 },
+        { id: 'północ', label: 'Częstochowa - Północ - KFC przy M1', shortLabel: 'Częstochowa - Północ', extraKm: 0 },
+        { id: 'wierzchowisko', label: 'Wierzchowisko - koniec ul. Długiej po stronie zachodniej', shortLabel: 'Wierzchowisko', extraKm: 0 },
+        { id: 'radostków', label: 'Radostków - szkoła podstawowa', shortLabel: 'Radostków', extraKm: 0 },
+        { id: 'custom', label: 'Własne miejsce', shortLabel: 'Własne miejsce', extraKm: null }
       ]
     };
 
@@ -263,6 +263,12 @@
     if (minStepView) {
       minStepView.textContent = MIN_BID_STEP;
     }
+    DEFAULT_CONFIG.pickupOptions.forEach(opt => {
+      const option = document.createElement('option');
+      option.value = opt.shortLabel;   // co się wyświetli po wyborze
+      option.textContent = opt.label;  // co widać na liście
+      select.appendChild(option);
+    });
 
 
     function renderSeatsTable(seats){
