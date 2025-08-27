@@ -30,6 +30,30 @@
     /* toast */
     .toast{position:fixed;right:20px;bottom:20px;background:#111;color:white;padding:10px 14px;border-radius:8px;box-shadow:0 6px 18px rgba(0,0,0,0.2);opacity:0;transform:translateY(10px);transition:opacity .25s,transform .25s;z-index:9999}
     .toast.show{opacity:1;transform:translateY(0)}
+    /* obrazek na końcu strony */
+    .end-image-card{
+      margin:18px auto;
+      padding:14px;
+      border-radius:12px;
+      box-shadow:0 8px 24px rgba(0,0,0,0.12);
+      max-width:920px;
+      background:linear-gradient(180deg, rgba(255,255,255,0.95), rgba(250,250,250,0.95));
+      text-align:center;
+    }
+    .end-image-card img.hero-image{
+      display:block;
+      margin:8px auto;
+      max-width:100%;
+      height:auto;
+      border-radius:10px;
+      box-shadow:0 6px 18px rgba(0,0,0,0.08);
+    }
+    .end-image-card .img-caption{
+      margin-top:8px;
+      color:#444;
+      font-size:13px;
+    }
+
   </style>
 </head>
 <body>
@@ -107,6 +131,15 @@
   <footer>
     <div class="muted">Licytacja trwa do 29 sierpnia 2025, 15:00.</div>
   </footer>
+
+    <!-- obrazek podróży -->
+  <div class="end-image-card">
+    <!-- jeśli Twoja przeglądarka/serwer nie obsługuje znaków w nazwie pliku dobrze, użyj zakodowanej nazwy:
+        src="i30%20podr%C3%B3%C5%BC.png"  -->
+    <img src="i30 podróż.png" alt="i30 podróż — ilustracja" class="hero-image" />
+    <div class="img-caption">i30 — miłego podróżowania! (plik: <code>i30 podróż.png</code>)</div>
+  </div>
+
 
   <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
