@@ -29,7 +29,7 @@
     }
     /* historia: domyślnie szary tekst */
     #historyTable tbody tr {
-      color: #888888; /* szary */
+      color: hsla(0, 0%, 0%, 0.347); /* szary */
     }
 
     /* wiersze aktywne (odpowiadają aktualnym ofertom) - normalny kolor */
@@ -169,6 +169,23 @@
       <div id="nameSaved" class="muted"></div>
     </div>
 
+    <script>
+    const fullnameInput = document.getElementById('fullname');
+
+    fullnameInput.addEventListener('input', () => {
+      // usuń cyfry
+      let val = fullnameInput.value.replace(/[0-9]/g, '');
+      // usuń myślniki
+      val = val.replace(/-/g, '');
+      // usuń podwójne (lub więcej) spacje
+      val = val.replace(/\s{2,}/g, ' ');
+      if(val.length > 25) val = val.slice(0, 25);
+      // zapisz z powrotem
+      fullnameInput.value = val;
+    });
+    </script>
+
+
     <label>Wybierz miejsce z listy</label>
     <select id="seatSelect"></select>
 
@@ -262,7 +279,7 @@
     const DEFAULT_CONFIG = {
       seats: [
         { id: 'seat1', label: 'Fotel obok najlepszego kierowcy 😎', currentBid: 0.1, leader: 'Tymon 🧈wski' },
-        { id: 'seat2', label: 'Miejsce z tyłu za pasażerem',         currentBid: 0.1, leader: 'Ksenia Gasiak ❤️' },
+        { id: 'seat2', label: 'Miejsce z tyłu za pasażerem', currentBid: 0.41, leader: 'Alojzy Popiołek' },
         { id: 'seat3', label: 'Miejsce na środku z tyłu',            currentBid: 0, leader: 'Igor 🎮oń' },
         { id: 'seat4', label: 'Miejsce za super kierowcą',           currentBid: 6.7, leader: 'Kacper 🌿💧ek' }
       ],
@@ -374,10 +391,10 @@ function populateSelects(seats){
     function generateShortCode(fullName, amount, seatId){
       const parts = fullName.trim().split(/\s+/);
       const place = pickupSelect.value;
-      const name = fullName.toUpperCase().replace(/\s+/g, '');
+      const name = fullName.replace(/\s+/g, '-');
       if(parts.length===0) return '';
-      const first = parts[0].toUpperCase();
-      const Initial = parts.length>1 ? parts[parts.length-1].toUpperCase() : '';
+      const first = parts[0];
+      const Initial = parts.length>1 ? parts[parts.length-1]: '';
       const seatNum = seatId.replace('seat','');
       let unprot = seatNum + first + Initial + amount;
       let hasz = 12345;
@@ -395,6 +412,7 @@ function populateSelects(seats){
 
     // historia
     const HISTORY = [
+      { date: "28 sierpnia", amount: 0.41, seat: "Miejsce z tyłu za pasażerem", desc: "Alojzy Popiołek" },
       { date: "27 sierpnia", amount: 6.7, seat: "Miejsce za super kierowcą", desc: "Kacper 🌿💧ek" },
       { date: "27 sierpnia", amount: 0.2, seat: "Miejsce za super kierowcą", desc: "Kacper 🌿💧ek" },
       { date: "27 sierpnia", amount: 0.1, seat: "Fotel obok najlepszego kierowcy 😎", desc: "Tymon 🧈wski" },
